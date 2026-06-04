@@ -2,6 +2,7 @@ package com.farm.exchange;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -296,6 +297,7 @@ class FarmExchangeApplicationTests {
     @Test
     void marketBuyAndSellApplyTaxAndLedgers() throws Exception {
         String userId = registerTestUser();
+        resetMarketTaxRate();
         jdbcTemplate.update("update items set current_price = base_price where code = 'WHEAT'");
         mockMvc.perform(post("/api/users/" + userId + "/trade-password")
                         .contentType("application/json")
@@ -387,6 +389,7 @@ class FarmExchangeApplicationTests {
     void bulkMarketTradeRequiresTokenAndConsumesIt() throws Exception {
         String userId = registerTestUser();
         setTradePassword(userId);
+        resetMarketTaxRate();
         jdbcTemplate.update("update wallets set balance = 300000 where user_id = ?::uuid", userId);
         jdbcTemplate.update("update items set current_price = base_price where code = 'WHEAT'");
 
@@ -584,6 +587,76 @@ class FarmExchangeApplicationTests {
         Assertions.assertEquals(0, remainingUses);
     }
 
+    @Test
+    void adminCanUpdateTaxIssueTokenAndQueryUserAssetsTrades() throws Exception {
+        String adminId = registerTestUser();
+        String playerId = registerTestUser();
+        makeAdmin(adminId);
+        setTradePassword(playerId);
+        jdbcTemplate.update("update items set current_price = base_price where code = 'WHEAT'");
+
+        mockMvc.perform(get("/api/admin/tax-configs")
+                        .param("adminUserId", playerId))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("需要管理员权限"));
+
+        mockMvc.perform(get("/api/admin/tax-configs")
+                        .param("adminUserId", adminId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3));
+
+        mockMvc.perform(put("/api/admin/tax-configs/MARKET")
+                        .param("adminUserId", adminId)
+                        .contentType("application/json")
+                        .content("{\"rateBasisPoints\":250,\"reason\":\"测试调整交易站税率\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tradeType").value("MARKET"))
+                .andExpect(jsonPath("$.rateBasisPoints").value(250))
+                .andExpect(jsonPath("$.updatedBy").value(adminId));
+
+        MvcResult tokenResult = mockMvc.perform(post("/api/admin/users/" + playerId + "/bulk-tokens")
+                        .param("adminUserId", adminId)
+                        .contentType("application/json")
+                        .content("{\"allowedItemType\":\"HARVEST\",\"singleTradeLimit\":200000,\"totalLimit\":200000,\"remainingUses\":2,\"expireHours\":24}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.remainingUses").value(2))
+                .andReturn();
+        String tokenCode = extractJsonString(tokenResult.getResponse().getContentAsString(), "tokenCode");
+
+        mockMvc.perform(post("/api/users/" + playerId + "/market/buy")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":100,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.taxAmount").value(62));
+
+        mockMvc.perform(get("/api/admin/users/" + playerId + "/assets")
+                        .param("adminUserId", adminId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(playerId))
+                .andExpect(jsonPath("$.inventory[0].itemCode").value("WHEAT"));
+
+        mockMvc.perform(get("/api/admin/users/" + playerId + "/trades")
+                        .param("adminUserId", adminId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].tradeSource").value("MARKET"))
+                .andExpect(jsonPath("$[0].itemCode").value("WHEAT"));
+
+        Integer auditCount = jdbcTemplate.queryForObject(
+                "select count(*) from admin_audit_logs where admin_user_id = ?::uuid and action in ('UPDATE_TAX_CONFIG', 'ISSUE_BULK_TOKEN')",
+                Integer.class,
+                adminId
+        );
+        Integer tokenCount = jdbcTemplate.queryForObject(
+                "select count(*) from bulk_trade_tokens where user_id = ?::uuid and token_code = ?",
+                Integer.class,
+                playerId,
+                tokenCode
+        );
+
+        Assertions.assertEquals(2, auditCount);
+        Assertions.assertEquals(1, tokenCount);
+    }
+
     private String registerTestUser() throws Exception {
         String username = "tester_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
@@ -618,6 +691,14 @@ class FarmExchangeApplicationTests {
                 quantity,
                 itemCode
         );
+    }
+
+    private void makeAdmin(String userId) {
+        jdbcTemplate.update("update app_users set role = 'ADMIN' where id = ?::uuid", userId);
+    }
+
+    private void resetMarketTaxRate() {
+        jdbcTemplate.update("update tax_config set rate_basis_points = 300, updated_by = null, updated_reason = 'Test reset market tax', updated_at = now() where trade_type = 'MARKET'");
     }
 
     private String extractJsonString(String json, String fieldName) {
