@@ -293,6 +293,72 @@ class FarmExchangeApplicationTests {
         Assertions.assertEquals(2, ledgerCount);
     }
 
+    @Test
+    void marketBuyAndSellApplyTaxAndLedgers() throws Exception {
+        String userId = registerTestUser();
+        mockMvc.perform(post("/api/users/" + userId + "/trade-password")
+                        .contentType("application/json")
+                        .content("{\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/users/" + userId + "/market/buy")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":100,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.side").value("BUY"))
+                .andExpect(jsonPath("$.itemCode").value("WHEAT"))
+                .andExpect(jsonPath("$.quantity").value(100))
+                .andExpect(jsonPath("$.unitPrice").value(25))
+                .andExpect(jsonPath("$.grossAmount").value(2500))
+                .andExpect(jsonPath("$.taxAmount").value(75))
+                .andExpect(jsonPath("$.netAmount").value(2575))
+                .andExpect(jsonPath("$.balanceAfter").value(7425))
+                .andExpect(jsonPath("$.availableQuantityAfter").value(100));
+
+        mockMvc.perform(post("/api/users/" + userId + "/market/sell")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":40,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.side").value("SELL"))
+                .andExpect(jsonPath("$.grossAmount").value(1000))
+                .andExpect(jsonPath("$.taxAmount").value(30))
+                .andExpect(jsonPath("$.netAmount").value(970))
+                .andExpect(jsonPath("$.balanceAfter").value(8395))
+                .andExpect(jsonPath("$.availableQuantityAfter").value(60));
+
+        Long balance = jdbcTemplate.queryForObject(
+                "select balance from wallets where user_id = ?::uuid",
+                Long.class,
+                userId
+        );
+        Long wheatQuantity = jdbcTemplate.queryForObject(
+                "select pi.available_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                userId
+        );
+        Integer tradeCount = jdbcTemplate.queryForObject(
+                "select count(*) from market_trades where user_id = ?::uuid",
+                Integer.class,
+                userId
+        );
+        Integer taxCount = jdbcTemplate.queryForObject(
+                "select count(*) from tax_records where payer_user_id = ?::uuid and trade_type = 'MARKET'",
+                Integer.class,
+                userId
+        );
+        Integer ledgerCount = jdbcTemplate.queryForObject(
+                "select count(*) from asset_ledger where user_id = ?::uuid and reason in ('MARKET_BUY', 'MARKET_SELL')",
+                Integer.class,
+                userId
+        );
+
+        Assertions.assertEquals(8395L, balance);
+        Assertions.assertEquals(60L, wheatQuantity);
+        Assertions.assertEquals(2, tradeCount);
+        Assertions.assertEquals(2, taxCount);
+        Assertions.assertEquals(4, ledgerCount);
+    }
+
     private String registerTestUser() throws Exception {
         String username = "tester_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
