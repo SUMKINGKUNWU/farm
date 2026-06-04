@@ -176,7 +176,11 @@ class FarmExchangeApplicationTests {
 
         mockMvc.perform(get("/api/me/summary"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("请先登录"));
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("请先登录"))
+                .andExpect(jsonPath("$.path").value("/api/me/summary"));
 
         mockMvc.perform(get("/api/me/summary")
                         .header("Authorization", "Bearer " + token))
@@ -212,6 +216,19 @@ class FarmExchangeApplicationTests {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.itemCode").value("WHEAT"));
+    }
+
+    @Test
+    void validationErrorsReturnFieldDetails() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType("application/json")
+                        .content("{\"username\":\"x\",\"nickname\":\"\",\"password\":\"123\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.path").value("/api/auth/register"))
+                .andExpect(jsonPath("$.fieldErrors.length()").isNumber());
     }
 
     @Test
