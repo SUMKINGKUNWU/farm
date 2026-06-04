@@ -169,6 +169,52 @@ class FarmExchangeApplicationTests {
     }
 
     @Test
+    void meEndpointsUseBearerTokenForPlayerOperations() throws Exception {
+        String userId = registerTestUser();
+        String username = lastRegisteredUsername;
+        String token = login(username);
+
+        mockMvc.perform(get("/api/me/summary"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("请先登录"));
+
+        mockMvc.perform(get("/api/me/summary")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(userId))
+                .andExpect(jsonPath("$.balance").value(10000))
+                .andExpect(jsonPath("$.farmSlots").value(4));
+
+        mockMvc.perform(post("/api/me/trade-password")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType("application/json")
+                        .content("{\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(userId))
+                .andExpect(jsonPath("$.tradePasswordSet").value(true));
+
+        mockMvc.perform(post("/api/me/shop/purchase")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT_SEED\",\"quantity\":2,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemCode").value("WHEAT_SEED"))
+                .andExpect(jsonPath("$.quantity").value(2))
+                .andExpect(jsonPath("$.balanceAfter").value(9840));
+
+        mockMvc.perform(get("/api/me/inventory")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].code").value("WHEAT_SEED"))
+                .andExpect(jsonPath("$[0].availableQuantity").value(2));
+
+        mockMvc.perform(get("/api/me/market/items/WHEAT/quote")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemCode").value("WHEAT"));
+    }
+
+    @Test
     void plantingRaisingAndHarvestingWork() throws Exception {
         String userId = registerTestUser();
         grantInventory(userId, "WHEAT_SEED", 2);
