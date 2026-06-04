@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>丰穗交易所 - 农牧经营金融游戏原型</title>
+  <style>
+    :root {
+      --paper: #f5ead2;
+      --paper-strong: #fff7e6;
+      --ink: #241a10;
+      --muted: #7a6a54;
+      --moss: #314b2f;
+      --moss-2: #527449;
+      --wheat: #dba94a;
+      --amber: #b96f2b;
+      --soil: #5b3926;
+      --red: #b84a35;
+      --green: #3f8751;
+      --blue: #3b6f87;
+      --line: rgba(36, 26, 16, .16);
+      --shadow: 0 24px 70px rgba(47, 32, 13, .22);
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Microsoft YaHei", "Noto Serif SC", "Songti SC", serif;
+      background:
+        radial-gradient(circle at 18% 18%, rgba(219, 169, 74, .34), transparent 28%),
+        radial-gradient(circle at 88% 8%, rgba(82, 116, 73, .24), transparent 32%),
+        linear-gradient(135deg, #3b2518 0%, #654124 26%, #ecd59f 26.4%, #f7edd7 69%, #47613b 69.4%, #20351f 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(36, 26, 16, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(36, 26, 16, .04) 1px, transparent 1px);
+      background-size: 22px 22px;
+      mix-blend-mode: multiply;
+      opacity: .58;
+    }
+
+    .app-shell {
+      width: min(1500px, calc(100vw - 36px));
+      min-height: calc(100vh - 36px);
+      margin: 18px auto;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .sidebar,
+    .workspace {
+      border: 1px solid rgba(255, 247, 230, .42);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 18px;
+      height: calc(100vh - 36px);
+      padding: 22px;
+      border-radius: var(--radius-xl);
+      background:
+        linear-gradient(180deg, rgba(36, 26, 16, .88), rgba(49, 75, 47, .86)),
+        radial-gradient(circle at top, rgba(219, 169, 74, .2), transparent);
+      color: var(--paper-strong);
+      overflow: hidden;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 26px;
+    }
+
+    .brand-mark {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      color: #27180c;
+      font-size: 28px;
+      font-weight: 900;
+      border-radius: 18px;
+      background:
+        conic-gradient(from 20deg, #e6c166, #f5ead2, #b96f2b, #e6c166);
+      box-shadow: inset 0 0 0 2px rgba(36, 26, 16, .18), 0 18px 30px rgba(0, 0, 0, .24);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: .08em;
+      line-height: 1.05;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: rgba(255, 247, 230, .68);
+      font-size: 12px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: grid;
+      gap: 10px;
+    }
+
+    .nav button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 15px;
+      color: rgba(255, 247, 230, .76);
+      font: inherit;
+      text-align: left;
+      border: 1px solid rgba(255, 247, 230, .14);
+      border-radius: 18px;
+      background: rgba(255, 247, 230, .05);
+      cursor: pointer;
+      transition: transform .22s ease, background .22s ease, color .22s ease;
+    }
+
+    .nav button:hover,
+    .nav button.active {
+      color: var(--paper-strong);
+      background: rgba(219, 169, 74, .22);
+      transform: translateX(4px);
+    }
+
+    .nav span:first-child {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+    }
+
+    .nav small {
+      color: rgba(255, 247, 230, .54);
+    }
+
+    .ledger-card {
+      position: absolute;
+      left: 22px;
+      right: 22px;
+      bottom: 22px;
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255, 247, 230, .12);
+      border: 1px solid rgba(255, 247, 230, .18);
+    }
+
+    .ledger-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 26px;
+      letter-spacing: .03em;
+    }
+
+    .ledger-card p {
+      margin: 8px 0 0;
+      color: rgba(255, 247, 230, .68);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .workspace {
+      min-height: calc(100vh - 36px);
+      border-radius: var(--radius-xl);
+      background: rgba(245, 234, 210, .88);
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 22px 26px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 247, 230, .62);
+    }
+
+    .page-title h2 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 48px);
+      line-height: .95;
+      letter-spacing: -.04em;
+    }
+
+    .page-title p {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(120px, 1fr));
+      gap: 10px;
+      min-width: 430px;
+    }
+
+    .quick-stat {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 247, 230, .7);
+    }
+
+    .quick-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .quick-stat b {
+      display: block;
+      margin-top: 5px;
+      font-size: 18px;
+    }
+
+    .page {
+      display: none;
+      padding: 24px;
+      animation: rise .45s ease both;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .dashboard-grid {
+      grid-template-columns: 1.15fr .85fr;
+    }
+
+    .three-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .two-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .market-grid {
+      grid-template-columns: 300px minmax(0, 1fr) 330px;
+    }
+
+    .card {
+      position: relative;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background:
+        linear-gradient(145deg, rgba(255, 247, 230, .92), rgba(237, 219, 175, .72));
+      box-shadow: 0 18px 45px rgba(76, 47, 23, .11);
+      overflow: hidden;
+    }
+
+    .card.dark {
+      color: var(--paper-strong);
+      background:
+        linear-gradient(145deg, rgba(36, 26, 16, .94), rgba(49, 75, 47, .91));
+      border-color: rgba(255, 247, 230, .18);
+    }
+
+    .card h3 {
+      margin: 0 0 14px;
+      font-size: 22px;
+      letter-spacing: -.02em;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .dark .muted {
+      color: rgba(255, 247, 230, .64);
+    }
+
+    .hero-market {
+      min-height: 300px;
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .hero-copy {
+      padding: 8px 0;
+    }
+
+    .hero-copy .eyebrow {
+      display: inline-flex;
+      padding: 7px 11px;
+      border-radius: 999px;
+      color: #2f2010;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      background: var(--wheat);
+    }
+
+    .hero-copy h3 {
+      margin: 18px 0 0;
+      max-width: 620px;
+      font-size: clamp(28px, 3.1vw, 44px);
+      line-height: 1.08;
+      letter-spacing: -.04em;
+    }
+
+    .hero-copy p {
+      max-width: 620px;
+      color: rgba(255, 247, 230, .72);
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .hero-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .hero-summary div {
+      padding: 13px;
+      border-radius: 17px;
+      background: rgba(255, 247, 230, .1);
+      border: 1px solid rgba(255, 247, 230, .12);
+    }
+
+    .hero-summary span {
+      display: block;
+      color: rgba(255, 247, 230, .58);
+      font-size: 12px;
+    }
+
+    .hero-summary b {
+      display: block;
+      margin-top: 5px;
+      font-size: 18px;
+    }
+
+    .ticker-board {
+      display: grid;
+      gap: 10px;
+      align-content: center;
+    }
+
+    .ticker {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      padding: 12px 13px;
+      border-radius: 16px;
+      background: rgba(255, 247, 230, .11);
+      border: 1px solid rgba(255, 247, 230, .12);
+    }
+
+    .ticker b {
+      font-size: 16px;
+    }
+
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+    .dark .up { color: #9cdf8f; }
+    .dark .down { color: #ef9d82; }
+
+    .progress-row {
+      display: grid;
+      gap: 12px;
+    }
+
+    .growth-item {
+      display: grid;
+      grid-template-columns: 52px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(255, 247, 230, .6);
+      border: 1px solid var(--line);
+    }
+
+    .icon-tile {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      color: var(--paper-strong);
+      font-size: 24px;
+      background: linear-gradient(135deg, var(--moss), var(--amber));
+    }
+
+    .bar {
+      height: 9px;
+      margin-top: 8px;
+      border-radius: 999px;
+      background: rgba(36, 26, 16, .12);
+      overflow: hidden;
+    }
+
+    .bar i {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--green), var(--wheat));
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 8px 11px;
+      border-radius: 999px;
+      color: var(--moss);
+      font-size: 12px;
+      font-weight: 900;
+      background: rgba(82, 116, 73, .12);
+      border: 1px solid rgba(82, 116, 73, .18);
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 16px;
+      padding: 13px 16px;
+      color: var(--paper-strong);
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--moss), var(--soil));
+      box-shadow: 0 12px 25px rgba(49, 75, 47, .23);
+    }
+
+    .btn.secondary {
+      color: var(--ink);
+      background: rgba(255, 247, 230, .8);
+      border: 1px solid var(--line);
+      box-shadow: none;
+    }
+
+    .plot-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .plot {
+      min-height: 146px;
+      padding: 13px;
+      border-radius: 20px;
+      border: 1px solid rgba(91, 57, 38, .24);
+      background:
+        linear-gradient(135deg, rgba(91, 57, 38, .14), rgba(219, 169, 74, .2)),
+        repeating-linear-gradient(45deg, rgba(91, 57, 38, .18) 0 7px, transparent 7px 17px);
+    }
+
+    .plot.empty {
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      border-style: dashed;
+      background: rgba(255, 247, 230, .46);
+    }
+
+    .plot.locked {
+      color: rgba(36, 26, 16, .78);
+      background:
+        linear-gradient(135deg, rgba(49, 75, 47, .12), rgba(219, 169, 74, .18)),
+        repeating-linear-gradient(-45deg, rgba(49, 75, 47, .18) 0 6px, transparent 6px 16px);
+      border-style: dashed;
+      border-color: rgba(49, 75, 47, .36);
+    }
+
+    .plot-meta {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .plot strong {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .plot .crop {
+      margin-top: 16px;
+      font-size: 36px;
+    }
+
+    .store-list,
+    .item-list,
+    .audit-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .store-item,
+    .item-row,
+    .audit-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: rgba(255, 247, 230, .58);
+    }
+
+    .item-row.active {
+      border-color: rgba(185, 111, 43, .55);
+      background: rgba(219, 169, 74, .18);
+    }
+
+    .chart {
+      position: relative;
+      height: 310px;
+      border-radius: 20px;
+      background:
+        linear-gradient(rgba(36, 26, 16, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(36, 26, 16, .08) 1px, transparent 1px),
+        rgba(255, 247, 230, .58);
+      background-size: 100% 20%, 12.5% 100%;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .chart svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .trade-form {
+      display: grid;
+      gap: 13px;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 13px 14px;
+      color: var(--ink);
+      font: inherit;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: rgba(255, 247, 230, .78);
+      outline: none;
+    }
+
+    .code-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .fee-box {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(49, 75, 47, .1);
+      border: 1px solid rgba(49, 75, 47, .14);
+    }
+
+    .fee-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .fee-line strong {
+      color: var(--ink);
+    }
+
+    .warning {
+      padding: 14px;
+      border-radius: 17px;
+      color: #5b2a15;
+      line-height: 1.6;
+      background: rgba(219, 169, 74, .2);
+      border: 1px solid rgba(185, 111, 43, .28);
+    }
+
+    .admin-matrix {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .admin-cell {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255, 247, 230, .62);
+      border: 1px solid var(--line);
+    }
+
+    .admin-cell b {
+      display: block;
+      margin-top: 8px;
+      font-size: 24px;
+    }
+
+    .risk-row {
+      display: grid;
+      grid-template-columns: 110px 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    @media (max-width: 1100px) {
+      .app-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: relative;
+        height: auto;
+      }
+
+      .ledger-card {
+        position: static;
+        margin-top: 18px;
+      }
+
+      .topbar,
+      .hero-market {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .quick-stats,
+      .dashboard-grid,
+      .three-grid,
+      .two-grid,
+      .market-grid,
+      .admin-matrix {
+        grid-template-columns: 1fr;
+        min-width: 0;
+      }
+
+      .plot-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">穗</div>
+        <div>
+          <h1>丰穗交易所</h1>
+          <p>Farm Exchange</p>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="原型页面导航">
+        <button class="active" data-page="dashboard"><span>总览大厅</span><small>01</small></button>
+        <button data-page="farm"><span>农场牧场</span><small>02</small></button>
+        <button data-page="market"><span>交易站</span><small>03</small></button>
+        <button data-page="private"><span>私下交易</span><small>04</small></button>
+        <button data-page="admin"><span>管理后台</span><small>05</small></button>
+      </nav>
+
+      <section class="ledger-card">
+        <span>系统税收账户</span>
+        <strong>¥ 182,409</strong>
+        <p>交易站税率 3%，私下交易税率 5%。所有资产变更写入流水，后台可审计。</p>
+      </section>
+    </aside>
+
+    <section class="workspace">
+      <header class="topbar">
+        <div class="page-title">
+          <h2 id="pageHeading">总览大厅</h2>
+          <p id="pageSubheading">经营状态、市场波动、待收获资产集中查看。</p>
+        </div>
+        <div class="quick-stats">
+          <div class="quick-stat"><span>玩家金币</span><b>10,000</b></div>
+          <div class="quick-stat"><span>仓库容量</span><b>76%</b></div>
+          <div class="quick-stat"><span>大宗令牌</span><b>2 枚</b></div>
+        </div>
+      </header>
+
+      <section class="page active" id="dashboard">
+        <div class="grid dashboard-grid">
+          <article class="card dark hero-market">
+            <div class="hero-copy">
+              <span class="eyebrow">今日经营摘要</span>
+              <h3>农场经营、市场交易和税收流水集中看板</h3>
+              <p>这里先呈现玩家每天最常用的信息：哪些资产快成熟，哪些商品在涨跌，当前交易税和风控状态是否正常。</p>
+              <div class="hero-summary">
+                <div><span>可收获</span><b>3 批</b></div>
+                <div><span>待成交</span><b>8 单</b></div>
+                <div><span>风控状态</span><b>正常</b></div>
+              </div>
+              <button class="btn" data-page="market">查看交易站</button>
+            </div>
+            <div class="ticker-board">
+              <div class="ticker"><b>小麦</b><span class="up">24.5 ↑ 3.2%</span></div>
+              <div class="ticker"><b>玉米</b><span class="down">31.0 ↓ 1.1%</span></div>
+              <div class="ticker"><b>鸡蛋</b><span class="up">18.2 ↑ 8.4%</span></div>
+              <div class="ticker"><b>牛奶</b><span class="down">42.8 ↓ 2.6%</span></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>成长中的资产</h3>
+            <div class="progress-row">
+              <div class="growth-item">
+                <div class="icon-tile">麦</div>
+                <div><strong>南坡小麦田</strong><div class="bar"><i style="width: 78%"></i></div></div>
+                <span class="pill">12 分钟</span>
+              </div>
+              <div class="growth-item">
+                <div class="icon-tile">牛</div>
+                <div><strong>一号奶牛栏</strong><div class="bar"><i style="width: 42%"></i></div></div>
+                <span class="pill">2 小时</span>
+              </div>
+              <div class="growth-item">
+                <div class="icon-tile">蛋</div>
+                <div><strong>鸡舍产蛋批次</strong><div class="bar"><i style="width: 100%"></i></div></div>
+                <span class="pill">可收获</span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="grid three-grid" style="margin-top:18px">
+          <article class="card">
+            <h3>今日任务</h3>
+            <p class="muted">收获小麦 0/3，完成交易 0/1，缴纳税收可获得经验加成。</p>
+          </article>
+          <article class="card">
+            <h3>经济提醒</h3>
+            <p class="muted">小麦 30 分钟成交量偏高，系统已降低单笔成交对价格的影响权重。</p>
+          </article>
+          <article class="card">
+            <h3>风控提示</h3>
+            <p class="muted">私下交易价格偏离市场价超过 25% 时，将触发二次确认和审计记录。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" id="farm">
+        <div class="grid market-grid">
+          <article class="card" style="grid-column: span 2">
+            <h3>土地与牧栏</h3>
+            <div class="plot-grid">
+              <div class="plot"><strong>小麦田</strong><span class="pill">12m</span><div class="crop">麦</div><div class="plot-meta">土地 1 / 等级 2</div></div>
+              <div class="plot empty"><strong>空地 + 播种</strong><div class="plot-meta">可选择种子投入生产</div></div>
+              <div class="plot"><strong>玉米田</strong><span class="pill">1h20m</span><div class="crop">玉</div><div class="plot-meta">土地 3 / 等级 1</div></div>
+              <div class="plot"><strong>鸡舍</strong><span class="pill">可收获</span><div class="crop">蛋</div><div class="plot-meta">牧栏 1 / 产蛋批次</div></div>
+              <div class="plot"><strong>奶牛栏</strong><span class="pill">2h</span><div class="crop">牛</div><div class="plot-meta">牧栏 2 / 需饲料维护</div></div>
+              <div class="plot empty"><strong>空牧栏 + 养殖</strong><div class="plot-meta">可放入幼崽或动物</div></div>
+              <div class="plot locked"><strong>扩建土地</strong><span class="pill">8 / 16</span><div class="plot-meta">下一块土地 8,000 金币；每扩建 1 个栏位，下一次费用翻倍。</div></div>
+              <div class="plot locked"><strong>扩建牧场</strong><span class="pill">6 / 16</span><div class="plot-meta">下一牧栏 16,000 金币；土地和牧栏都最多扩建到 16 个。</div></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>投产面板</h3>
+            <div class="store-list">
+              <div class="store-item"><div><strong>小麦种子</strong><p class="muted">30m 成熟，预计 12 份</p></div><b>80 金币</b></div>
+              <div class="store-item"><div><strong>鸡苗</strong><p class="muted">2h 产蛋，需饲料</p></div><b>320 金币</b></div>
+              <div class="store-item"><div><strong>奶牛</strong><p class="muted">6h 产奶，维护成本高</p></div><b>1,880 金币</b></div>
+            </div>
+            <div class="warning" style="margin-top:14px">新用户初始资金 10,000。土地和牧栏最多各 16 个，每扩建下一个栏位所需资金翻倍，用作长期目标和金币回收。</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" id="market">
+        <div class="grid market-grid">
+          <article class="card">
+            <h3>商品行情</h3>
+            <div class="item-list">
+              <div class="item-row active"><div><strong>小麦</strong><p class="muted">成交量 9,240</p></div><span class="up">24.5 ↑</span></div>
+              <div class="item-row"><div><strong>玉米</strong><p class="muted">成交量 4,821</p></div><span class="down">31.0 ↓</span></div>
+              <div class="item-row"><div><strong>鸡蛋</strong><p class="muted">成交量 12,904</p></div><span class="up">18.2 ↑</span></div>
+              <div class="item-row"><div><strong>牛奶</strong><p class="muted">成交量 2,418</p></div><span class="down">42.8 ↓</span></div>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>小麦价格走势</h3>
+            <div class="chart">
+              <svg viewBox="0 0 700 310" preserveAspectRatio="none" aria-label="价格走势图">
+                <defs>
+                  <linearGradient id="area" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#3f8751" stop-opacity=".42" />
+                    <stop offset="100%" stop-color="#3f8751" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                <path d="M0,248 C70,220 80,180 140,190 C210,206 230,102 300,124 C370,145 390,72 455,86 C525,101 548,42 610,64 C655,78 680,112 700,92 L700,310 L0,310 Z" fill="url(#area)" />
+                <path d="M0,248 C70,220 80,180 140,190 C210,206 230,102 300,124 C370,145 390,72 455,86 C525,101 548,42 610,64 C655,78 680,112 700,92" fill="none" stroke="#3f8751" stroke-width="5" />
+              </svg>
+            </div>
+            <p class="muted">价格由最近成交额、成交量、买卖盘压力和基础参考价共同计算，并设置涨跌幅保护。</p>
+          </article>
+
+          <article class="card">
+            <h3>买卖面板</h3>
+            <form class="trade-form">
+              <label>交易类型<select><option>买入小麦</option><option>卖出小麦</option></select></label>
+              <label>数量<input value="500" /></label>
+              <label>限价<input value="24.5" /></label>
+              <div class="fee-box">
+                <div class="fee-line"><span>交易金额</span><strong>12,250</strong></div>
+                <div class="fee-line"><span>交易站税 3%</span><strong>367.5</strong></div>
+                <div class="fee-line"><span>是否大宗</span><strong>否</strong></div>
+              </div>
+              <button class="btn" type="button">提交订单</button>
+              <button class="btn secondary" type="button">查看订单簿</button>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" id="private">
+        <div class="grid two-grid">
+          <article class="card">
+            <h3>创建私下交易报价单</h3>
+            <form class="trade-form">
+              <label>交易对象<input value="玩家 #A1049 / 青谷牧人" /></label>
+              <label>交易商品<select><option>小麦</option><option>鸡蛋</option><option>牛奶</option></select></label>
+              <label>商品数量<input value="5000" /></label>
+              <label>对方支付金币<input value="118000" /></label>
+              <label>交易密码<input type="password" value="123456" /></label>
+              <div class="fee-box">
+                <div class="fee-line"><span>市场参考价</span><strong>122,500</strong></div>
+                <div class="fee-line"><span>私下交易税 5%</span><strong>5,900</strong></div>
+                <div class="fee-line"><span>大宗令牌</span><strong>需要 1 枚</strong></div>
+                <div class="fee-line"><span>交易密码</span><strong>已设置</strong></div>
+                <div class="fee-line"><span>成交条件</span><strong>双方输入交易密码</strong></div>
+              </div>
+              <button class="btn" type="button">创建报价单</button>
+            </form>
+          </article>
+
+          <article class="card dark">
+            <h3>交易风险提示</h3>
+            <p class="muted">玩家只要开始使用交易功能，就必须先设置交易密码。私下交易由双方各自输入自己的交易密码确认，库存锁定、金币锁定和税费预扣都成功后才允许成交。</p>
+            <div class="ticker-board" style="margin-top:18px">
+              <div class="ticker"><b>税费去向</b><span>系统税收账户</span></div>
+              <div class="ticker"><b>令牌限制</b><span>单笔上限 200,000</span></div>
+              <div class="ticker"><b>密码规则</b><span>未设置则禁止交易</span></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" id="admin">
+        <div class="grid">
+          <article class="card">
+            <h3>运营控制台</h3>
+            <div class="admin-matrix">
+              <div class="admin-cell"><span class="muted">交易站税率</span><b>3%</b></div>
+              <div class="admin-cell"><span class="muted">私下交易税率</span><b>5%</b></div>
+              <div class="admin-cell"><span class="muted">大宗阈值</span><b>100k</b></div>
+              <div class="admin-cell"><span class="muted">今日熔断</span><b>2 次</b></div>
+            </div>
+          </article>
+
+          <div class="grid two-grid">
+            <article class="card">
+              <h3>风控事件</h3>
+              <div class="audit-list">
+                <div class="audit-row risk-row"><b>价格操纵</b><span class="muted">小号组在 8 分钟内互相成交 17 笔小麦</span><span class="pill">高</span></div>
+                <div class="audit-row risk-row"><b>大额转移</b><span class="muted">私下交易偏离市场价 31%</span><span class="pill">中</span></div>
+                <div class="audit-row risk-row"><b>重复请求</b><span class="muted">同一收获接口 3 秒内提交 12 次</span><span class="pill">中</span></div>
+              </div>
+            </article>
+
+            <article class="card">
+              <h3>审计日志</h3>
+              <div class="audit-list">
+                <div class="audit-row"><span>管理员修改小麦涨跌幅上限</span><b>10:24</b></div>
+                <div class="audit-row"><span>系统税率配置进入待生效状态</span><b>09:40</b></div>
+                <div class="audit-row"><span>冻结异常私下交易报价单</span><b>08:12</b></div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const titles = {
+      dashboard: ["总览大厅", "经营状态、市场波动、待收获资产集中查看。"],
+      farm: ["农场牧场", "土地、牧栏、投产成本和预计收益在这里形成经营决策。"],
+      market: ["交易站", "动态行情、成交量、税费和订单行为共同构成核心市场。"],
+      private: ["私下交易", "玩家点对点报价、税费预估、大宗令牌和风险提示。"],
+      admin: ["管理后台", "税率、商品参数、风控事件和管理员审计集中治理。"]
+    };
+
+    const buttons = document.querySelectorAll("[data-page]");
+    const pages = document.querySelectorAll(".page");
+    const heading = document.querySelector("#pageHeading");
+    const subheading = document.querySelector("#pageSubheading");
+
+    function showPage(id) {
+      pages.forEach((page) => page.classList.toggle("active", page.id === id));
+      buttons.forEach((button) => button.classList.toggle("active", button.dataset.page === id));
+      heading.textContent = titles[id][0];
+      subheading.textContent = titles[id][1];
+      window.location.hash = id;
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => showPage(button.dataset.page));
+    });
+
+    const initial = window.location.hash.replace("#", "");
+    if (titles[initial]) showPage(initial);
+  </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# Java / Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+backend/target/
+backend/.m2/
+
+# Logs
+*.log
+logs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Runtime secrets and local overrides
+.env
+*.local.yml
+*.local.yaml
+
