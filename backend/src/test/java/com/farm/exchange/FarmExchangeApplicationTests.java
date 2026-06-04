@@ -296,10 +296,17 @@ class FarmExchangeApplicationTests {
     @Test
     void marketBuyAndSellApplyTaxAndLedgers() throws Exception {
         String userId = registerTestUser();
+        jdbcTemplate.update("update items set current_price = base_price where code = 'WHEAT'");
         mockMvc.perform(post("/api/users/" + userId + "/trade-password")
                         .contentType("application/json")
                         .content("{\"tradePassword\":\"654321\"}"))
                 .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/users/" + userId + "/market/items/WHEAT/quote"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemCode").value("WHEAT"))
+                .andExpect(jsonPath("$.basePrice").value(25))
+                .andExpect(jsonPath("$.currentPrice").value(25));
 
         mockMvc.perform(post("/api/users/" + userId + "/market/buy")
                         .contentType("application/json")
@@ -315,16 +322,27 @@ class FarmExchangeApplicationTests {
                 .andExpect(jsonPath("$.balanceAfter").value(7425))
                 .andExpect(jsonPath("$.availableQuantityAfter").value(100));
 
+        mockMvc.perform(get("/api/users/" + userId + "/market/items/WHEAT/quote"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentPrice").value(26))
+                .andExpect(jsonPath("$.volume24h").isNumber())
+                .andExpect(jsonPath("$.tradeCount24h").isNumber());
+
         mockMvc.perform(post("/api/users/" + userId + "/market/sell")
                         .contentType("application/json")
                         .content("{\"itemCode\":\"WHEAT\",\"quantity\":40,\"tradePassword\":\"654321\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.side").value("SELL"))
-                .andExpect(jsonPath("$.grossAmount").value(1000))
-                .andExpect(jsonPath("$.taxAmount").value(30))
-                .andExpect(jsonPath("$.netAmount").value(970))
-                .andExpect(jsonPath("$.balanceAfter").value(8395))
+                .andExpect(jsonPath("$.unitPrice").value(26))
+                .andExpect(jsonPath("$.grossAmount").value(1040))
+                .andExpect(jsonPath("$.taxAmount").value(31))
+                .andExpect(jsonPath("$.netAmount").value(1009))
+                .andExpect(jsonPath("$.balanceAfter").value(8434))
                 .andExpect(jsonPath("$.availableQuantityAfter").value(60));
+
+        mockMvc.perform(get("/api/users/" + userId + "/market/items/WHEAT/quote"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentPrice").value(25));
 
         Long balance = jdbcTemplate.queryForObject(
                 "select balance from wallets where user_id = ?::uuid",
@@ -352,11 +370,17 @@ class FarmExchangeApplicationTests {
                 userId
         );
 
-        Assertions.assertEquals(8395L, balance);
+        Assertions.assertEquals(8434L, balance);
         Assertions.assertEquals(60L, wheatQuantity);
         Assertions.assertEquals(2, tradeCount);
         Assertions.assertEquals(2, taxCount);
         Assertions.assertEquals(4, ledgerCount);
+
+        Integer snapshotCount = jdbcTemplate.queryForObject(
+                "select count(*) from market_price_snapshots mps join items i on i.id = mps.item_id where i.code = 'WHEAT'",
+                Integer.class
+        );
+        Assertions.assertTrue(snapshotCount != null && snapshotCount >= 2);
     }
 
     private String registerTestUser() throws Exception {

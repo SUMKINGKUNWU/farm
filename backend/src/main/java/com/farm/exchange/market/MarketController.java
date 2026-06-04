@@ -2,6 +2,7 @@ package com.farm.exchange.market;
 
 import java.util.UUID;
 import javax.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,5 +28,9 @@ public class MarketController {
     public MarketTradeResponse sell(@PathVariable UUID userId, @Valid @RequestBody MarketTradeRequest request) {
         return marketService.trade(userId, "SELL", request);
     }
-}
 
+    @GetMapping("/items/{itemCode}/quote")
+    public MarketQuoteResponse quote(@PathVariable String itemCode) {
+        return marketService.quote(itemCode);
+    }
+}

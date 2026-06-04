@@ -73,13 +73,50 @@ public class MarketService {
                 grossAmount,
                 taxAmount
         );
+        updateMarketPriceSnapshot(item, side, request.getQuantity());
 
         return new MarketTradeResponse(tradeId, side, item.id, item.code, request.getQuantity(), item.currentPrice, grossAmount, taxAmount, netAmount, balanceAfter, availableQuantityAfter);
     }
 
+    public MarketQuoteResponse quote(String itemCode) {
+        return jdbcTemplate.query(
+                "select id, code, name, base_price, current_price from items where code = ? and item_type = 'HARVEST' and status = 'ACTIVE'",
+                rs -> {
+                    if (!rs.next()) {
+                        throw new ApiException(HttpStatus.NOT_FOUND, "行情商品不存在或不可用");
+                    }
+                    UUID itemId = UUID.fromString(rs.getString("id"));
+                    long basePrice = rs.getLong("base_price");
+                    long currentPrice = rs.getLong("current_price");
+                    Long volume24h = jdbcTemplate.queryForObject(
+                            "select coalesce(sum(quantity), 0) from market_trades where item_id = ? and created_at >= now() - interval '24 hours'",
+                            Long.class,
+                            itemId
+                    );
+                    Long tradeCount24h = jdbcTemplate.queryForObject(
+                            "select count(*) from market_trades where item_id = ? and created_at >= now() - interval '24 hours'",
+                            Long.class,
+                            itemId
+                    );
+                    int changeBasisPoints = basePrice == 0 ? 0 : (int) ((currentPrice - basePrice) * 10000L / basePrice);
+                    return new MarketQuoteResponse(
+                            itemId,
+                            rs.getString("code"),
+                            rs.getString("name"),
+                            basePrice,
+                            currentPrice,
+                            volume24h == null ? 0L : volume24h,
+                            tradeCount24h == null ? 0L : tradeCount24h,
+                            changeBasisPoints
+                    );
+                },
+                itemCode
+        );
+    }
+
     private MarketItem marketItem(String itemCode) {
         return jdbcTemplate.query(
-                "select id, code, item_type, current_price, trade_enabled from items where code = ? and status = 'ACTIVE'",
+                "select id, code, item_type, base_price, current_price, trade_enabled from items where code = ? and status = 'ACTIVE'",
                 rs -> {
                     if (!rs.next()) {
                         throw new ApiException(HttpStatus.NOT_FOUND, "交易商品不存在或不可用");
@@ -88,6 +125,7 @@ public class MarketService {
                             UUID.fromString(rs.getString("id")),
                             rs.getString("code"),
                             rs.getString("item_type"),
+                            rs.getLong("base_price"),
                             rs.getLong("current_price"),
                             rs.getBoolean("trade_enabled")
                     );
@@ -197,17 +235,53 @@ public class MarketService {
         );
     }
 
+    private void updateMarketPriceSnapshot(MarketItem item, String side, long quantity) {
+        int impactBasisPoints = (int) Math.min(200L, Math.max(1L, quantity / 10L));
+        if ("SELL".equals(side)) {
+            impactBasisPoints = -impactBasisPoints;
+        }
+        long changedPrice = item.currentPrice + item.currentPrice * impactBasisPoints / 10000L;
+        if ("BUY".equals(side) && changedPrice <= item.currentPrice) {
+            changedPrice = item.currentPrice + 1;
+        }
+        if ("SELL".equals(side) && changedPrice >= item.currentPrice) {
+            changedPrice = item.currentPrice - 1;
+        }
+        long minPrice = Math.max(1L, item.basePrice / 2L);
+        long maxPrice = Math.max(minPrice, item.basePrice * 2L);
+        long newPrice = Math.max(minPrice, Math.min(maxPrice, changedPrice));
+        int changeBasisPoints = item.basePrice == 0 ? 0 : (int) ((newPrice - item.basePrice) * 10000L / item.basePrice);
+
+        jdbcTemplate.update(
+                "update items set current_price = ?, updated_at = now(), version = version + 1 where id = ?",
+                newPrice,
+                item.id
+        );
+        jdbcTemplate.update(
+                "insert into market_price_snapshots (item_id, price, volume_24h, trade_count_24h, change_basis_points) " +
+                        "values (?, ?, (select coalesce(sum(quantity), 0) from market_trades where item_id = ? and created_at >= now() - interval '24 hours'), " +
+                        "(select count(*) from market_trades where item_id = ? and created_at >= now() - interval '24 hours'), ?)",
+                item.id,
+                newPrice,
+                item.id,
+                item.id,
+                changeBasisPoints
+        );
+    }
+
     private static class MarketItem {
         private final UUID id;
         private final String code;
         private final String itemType;
+        private final long basePrice;
         private final long currentPrice;
         private final boolean tradeEnabled;
 
-        private MarketItem(UUID id, String code, String itemType, long currentPrice, boolean tradeEnabled) {
+        private MarketItem(UUID id, String code, String itemType, long basePrice, long currentPrice, boolean tradeEnabled) {
             this.id = id;
             this.code = code;
             this.itemType = itemType;
+            this.basePrice = basePrice;
             this.currentPrice = currentPrice;
             this.tradeEnabled = tradeEnabled;
         }
@@ -223,4 +297,3 @@ public class MarketService {
         }
     }
 }
-
