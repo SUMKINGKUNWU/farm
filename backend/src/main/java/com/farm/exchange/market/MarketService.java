@@ -1,5 +1,7 @@
 package com.farm.exchange.market;
 
+import com.farm.exchange.bulk.BulkTokenService;
+import com.farm.exchange.bulk.BulkTradeItem;
 import com.farm.exchange.common.ApiException;
 import com.farm.exchange.user.TradePasswordService;
 import java.util.UUID;
@@ -13,10 +15,12 @@ public class MarketService {
 
     private final JdbcTemplate jdbcTemplate;
     private final TradePasswordService tradePasswordService;
+    private final BulkTokenService bulkTokenService;
 
-    public MarketService(JdbcTemplate jdbcTemplate, TradePasswordService tradePasswordService) {
+    public MarketService(JdbcTemplate jdbcTemplate, TradePasswordService tradePasswordService, BulkTokenService bulkTokenService) {
         this.jdbcTemplate = jdbcTemplate;
         this.tradePasswordService = tradePasswordService;
+        this.bulkTokenService = bulkTokenService;
     }
 
     @Transactional
@@ -24,6 +28,7 @@ public class MarketService {
         tradePasswordService.verify(userId, request.getTradePassword());
         MarketItem item = marketItem(request.getItemCode());
         long grossAmount = Math.multiplyExact(item.currentPrice, request.getQuantity());
+        bulkTokenService.consumeIfRequired(userId, item.toBulkTradeItem(), request.getQuantity(), grossAmount, request.getBulkTokenCode());
         int taxRate = marketTaxRate();
         long taxAmount = grossAmount * taxRate / 10000L;
 
@@ -116,7 +121,7 @@ public class MarketService {
 
     private MarketItem marketItem(String itemCode) {
         return jdbcTemplate.query(
-                "select id, code, item_type, base_price, current_price, trade_enabled from items where code = ? and status = 'ACTIVE'",
+                "select id, code, item_type, base_price, current_price, bulk_quantity_threshold, bulk_amount_threshold, trade_enabled from items where code = ? and status = 'ACTIVE'",
                 rs -> {
                     if (!rs.next()) {
                         throw new ApiException(HttpStatus.NOT_FOUND, "交易商品不存在或不可用");
@@ -127,6 +132,8 @@ public class MarketService {
                             rs.getString("item_type"),
                             rs.getLong("base_price"),
                             rs.getLong("current_price"),
+                            nullableLong(rs, "bulk_quantity_threshold"),
+                            nullableLong(rs, "bulk_amount_threshold"),
                             rs.getBoolean("trade_enabled")
                     );
                     if (!item.tradeEnabled) {
@@ -269,21 +276,34 @@ public class MarketService {
         );
     }
 
+    private Long nullableLong(java.sql.ResultSet rs, String columnName) throws java.sql.SQLException {
+        long value = rs.getLong(columnName);
+        return rs.wasNull() ? null : value;
+    }
+
     private static class MarketItem {
         private final UUID id;
         private final String code;
         private final String itemType;
         private final long basePrice;
         private final long currentPrice;
+        private final Long bulkQuantityThreshold;
+        private final Long bulkAmountThreshold;
         private final boolean tradeEnabled;
 
-        private MarketItem(UUID id, String code, String itemType, long basePrice, long currentPrice, boolean tradeEnabled) {
+        private MarketItem(UUID id, String code, String itemType, long basePrice, long currentPrice, Long bulkQuantityThreshold, Long bulkAmountThreshold, boolean tradeEnabled) {
             this.id = id;
             this.code = code;
             this.itemType = itemType;
             this.basePrice = basePrice;
             this.currentPrice = currentPrice;
+            this.bulkQuantityThreshold = bulkQuantityThreshold;
+            this.bulkAmountThreshold = bulkAmountThreshold;
             this.tradeEnabled = tradeEnabled;
+        }
+
+        private BulkTradeItem toBulkTradeItem() {
+            return new BulkTradeItem(id, code, itemType, bulkQuantityThreshold, bulkAmountThreshold);
         }
     }
 

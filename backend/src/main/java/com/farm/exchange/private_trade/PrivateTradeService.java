@@ -1,5 +1,7 @@
 package com.farm.exchange.private_trade;
 
+import com.farm.exchange.bulk.BulkTokenService;
+import com.farm.exchange.bulk.BulkTradeItem;
 import com.farm.exchange.common.ApiException;
 import com.farm.exchange.user.TradePasswordService;
 import java.sql.Timestamp;
@@ -15,10 +17,12 @@ public class PrivateTradeService {
 
     private final JdbcTemplate jdbcTemplate;
     private final TradePasswordService tradePasswordService;
+    private final BulkTokenService bulkTokenService;
 
-    public PrivateTradeService(JdbcTemplate jdbcTemplate, TradePasswordService tradePasswordService) {
+    public PrivateTradeService(JdbcTemplate jdbcTemplate, TradePasswordService tradePasswordService, BulkTokenService bulkTokenService) {
         this.jdbcTemplate = jdbcTemplate;
         this.tradePasswordService = tradePasswordService;
+        this.bulkTokenService = bulkTokenService;
     }
 
     @Transactional
@@ -71,6 +75,13 @@ public class PrivateTradeService {
             expireOffer(offer);
             throw new ApiException(HttpStatus.CONFLICT, "报价单已过期");
         }
+        UUID bulkTokenId = bulkTokenService.consumeIfRequired(
+                buyerUserId,
+                new BulkTradeItem(offer.itemId, offer.itemCode, offer.itemType, offer.bulkQuantityThreshold, offer.bulkAmountThreshold),
+                offer.quantity,
+                offer.priceAmount,
+                request.getBulkTokenCode()
+        );
 
         WalletSnapshot buyerWallet = lockedWallet(offer.buyerUserId);
         WalletSnapshot sellerWallet = lockedWallet(offer.sellerUserId);
@@ -88,7 +99,8 @@ public class PrivateTradeService {
         long buyerQuantityAfter = addInventory(offer.buyerUserId, offer.itemId, offer.quantity);
 
         jdbcTemplate.update(
-                "update private_trade_offers set status = 'COMPLETED', accepted_at = now(), updated_at = now(), version = version + 1 where id = ?",
+                "update private_trade_offers set status = 'COMPLETED', bulk_token_id = ?, accepted_at = now(), updated_at = now(), version = version + 1 where id = ?",
+                bulkTokenId,
                 offer.id
         );
         jdbcTemplate.update(
@@ -231,7 +243,7 @@ public class PrivateTradeService {
 
     private OfferSnapshot lockOffer(UUID offerId) {
         return jdbcTemplate.query(
-                "select p.id, p.seller_user_id, p.buyer_user_id, p.item_id, i.code as item_code, p.quantity, p.price_amount, p.tax_amount, p.expires_at, p.status " +
+                "select p.id, p.seller_user_id, p.buyer_user_id, p.item_id, i.code as item_code, i.item_type, i.bulk_quantity_threshold, i.bulk_amount_threshold, p.quantity, p.price_amount, p.tax_amount, p.expires_at, p.status " +
                         "from private_trade_offers p join items i on i.id = p.item_id where p.id = ? for update",
                 rs -> {
                     if (!rs.next()) {
@@ -243,6 +255,9 @@ public class PrivateTradeService {
                             UUID.fromString(rs.getString("buyer_user_id")),
                             UUID.fromString(rs.getString("item_id")),
                             rs.getString("item_code"),
+                            rs.getString("item_type"),
+                            nullableLong(rs, "bulk_quantity_threshold"),
+                            nullableLong(rs, "bulk_amount_threshold"),
                             rs.getLong("quantity"),
                             rs.getLong("price_amount"),
                             rs.getLong("tax_amount"),
@@ -307,6 +322,11 @@ public class PrivateTradeService {
         );
     }
 
+    private Long nullableLong(java.sql.ResultSet rs, String columnName) throws java.sql.SQLException {
+        long value = rs.getLong(columnName);
+        return rs.wasNull() ? null : value;
+    }
+
     private static class PrivateTradeItem {
         private final UUID id;
         private final String code;
@@ -327,18 +347,24 @@ public class PrivateTradeService {
         private final UUID buyerUserId;
         private final UUID itemId;
         private final String itemCode;
+        private final String itemType;
+        private final Long bulkQuantityThreshold;
+        private final Long bulkAmountThreshold;
         private final long quantity;
         private final long priceAmount;
         private final long taxAmount;
         private final OffsetDateTime expiresAt;
         private final String status;
 
-        private OfferSnapshot(UUID id, UUID sellerUserId, UUID buyerUserId, UUID itemId, String itemCode, long quantity, long priceAmount, long taxAmount, OffsetDateTime expiresAt, String status) {
+        private OfferSnapshot(UUID id, UUID sellerUserId, UUID buyerUserId, UUID itemId, String itemCode, String itemType, Long bulkQuantityThreshold, Long bulkAmountThreshold, long quantity, long priceAmount, long taxAmount, OffsetDateTime expiresAt, String status) {
             this.id = id;
             this.sellerUserId = sellerUserId;
             this.buyerUserId = buyerUserId;
             this.itemId = itemId;
             this.itemCode = itemCode;
+            this.itemType = itemType;
+            this.bulkQuantityThreshold = bulkQuantityThreshold;
+            this.bulkAmountThreshold = bulkAmountThreshold;
             this.quantity = quantity;
             this.priceAmount = priceAmount;
             this.taxAmount = taxAmount;
@@ -357,4 +383,3 @@ public class PrivateTradeService {
         }
     }
 }
-

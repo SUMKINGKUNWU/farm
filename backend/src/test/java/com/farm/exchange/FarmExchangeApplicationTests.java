@@ -384,6 +384,59 @@ class FarmExchangeApplicationTests {
     }
 
     @Test
+    void bulkMarketTradeRequiresTokenAndConsumesIt() throws Exception {
+        String userId = registerTestUser();
+        setTradePassword(userId);
+        jdbcTemplate.update("update wallets set balance = 300000 where user_id = ?::uuid", userId);
+        jdbcTemplate.update("update items set current_price = base_price where code = 'WHEAT'");
+
+        mockMvc.perform(post("/api/users/" + userId + "/market/buy")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":5000,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("大宗交易需要提供有效令牌"));
+
+        MvcResult tokenResult = mockMvc.perform(post("/api/users/" + userId + "/bulk-tokens")
+                        .contentType("application/json")
+                        .content("{\"allowedItemType\":\"HARVEST\",\"singleTradeLimit\":200000,\"totalLimit\":200000,\"remainingUses\":1,\"expireHours\":24}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.remainingUses").value(1))
+                .andReturn();
+        String tokenCode = extractJsonString(tokenResult.getResponse().getContentAsString(), "tokenCode");
+
+        mockMvc.perform(get("/api/users/" + userId + "/bulk-tokens"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].tokenCode").value(tokenCode));
+
+        mockMvc.perform(post("/api/users/" + userId + "/market/buy")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":5000,\"tradePassword\":\"654321\",\"bulkTokenCode\":\"" + tokenCode + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.grossAmount").value(125000))
+                .andExpect(jsonPath("$.taxAmount").value(3750));
+
+        Integer remainingUses = jdbcTemplate.queryForObject(
+                "select remaining_uses from bulk_trade_tokens where token_code = ?",
+                Integer.class,
+                tokenCode
+        );
+        Long usedAmount = jdbcTemplate.queryForObject(
+                "select used_amount from bulk_trade_tokens where token_code = ?",
+                Long.class,
+                tokenCode
+        );
+        String status = jdbcTemplate.queryForObject(
+                "select status from bulk_trade_tokens where token_code = ?",
+                String.class,
+                tokenCode
+        );
+
+        Assertions.assertEquals(0, remainingUses);
+        Assertions.assertEquals(125000L, usedAmount);
+        Assertions.assertEquals("USED", status);
+    }
+
+    @Test
     void privateTradeCreateCancelAndAcceptWork() throws Exception {
         String sellerId = registerTestUser();
         String buyerId = registerTestUser();
@@ -476,6 +529,59 @@ class FarmExchangeApplicationTests {
                         .contentType("application/json")
                         .content("{\"tradePassword\":\"654321\"}"))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void bulkPrivateTradeRequiresBuyerTokenOnAccept() throws Exception {
+        String sellerId = registerTestUser();
+        String buyerId = registerTestUser();
+        setTradePassword(sellerId);
+        setTradePassword(buyerId);
+        grantInventory(sellerId, "WHEAT", 6000);
+        jdbcTemplate.update("update wallets set balance = 300000 where user_id = ?::uuid", buyerId);
+
+        MvcResult offerResult = mockMvc.perform(post("/api/users/" + sellerId + "/private-trades")
+                        .contentType("application/json")
+                        .content("{\"buyerUserId\":\"" + buyerId + "\",\"itemCode\":\"WHEAT\",\"quantity\":5000,\"priceAmount\":125000,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String offerId = extractJsonString(offerResult.getResponse().getContentAsString(), "offerId");
+
+        mockMvc.perform(post("/api/users/" + buyerId + "/private-trades/" + offerId + "/accept")
+                        .contentType("application/json")
+                        .content("{\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("大宗交易需要提供有效令牌"));
+
+        MvcResult tokenResult = mockMvc.perform(post("/api/users/" + buyerId + "/bulk-tokens")
+                        .contentType("application/json")
+                        .content("{\"allowedItemType\":\"HARVEST\",\"singleTradeLimit\":200000,\"totalLimit\":200000,\"remainingUses\":1,\"expireHours\":24}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String tokenCode = extractJsonString(tokenResult.getResponse().getContentAsString(), "tokenCode");
+
+        mockMvc.perform(post("/api/users/" + buyerId + "/private-trades/" + offerId + "/accept")
+                        .contentType("application/json")
+                        .content("{\"tradePassword\":\"654321\",\"bulkTokenCode\":\"" + tokenCode + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.priceAmount").value(125000))
+                .andExpect(jsonPath("$.taxAmount").value(6250));
+
+        Integer linkedOfferCount = jdbcTemplate.queryForObject(
+                "select count(*) from private_trade_offers p join bulk_trade_tokens b on b.id = p.bulk_token_id where p.id = ?::uuid and b.token_code = ?",
+                Integer.class,
+                offerId,
+                tokenCode
+        );
+        Integer remainingUses = jdbcTemplate.queryForObject(
+                "select remaining_uses from bulk_trade_tokens where token_code = ?",
+                Integer.class,
+                tokenCode
+        );
+
+        Assertions.assertEquals(1, linkedOfferCount);
+        Assertions.assertEquals(0, remainingUses);
     }
 
     private String registerTestUser() throws Exception {

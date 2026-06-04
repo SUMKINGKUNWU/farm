@@ -18,6 +18,8 @@ public class MarketTradeRequest {
     @Size(min = 6, max = 64, message = "交易密码长度不合法")
     private String tradePassword;
 
+    private String bulkTokenCode;
+
     public String getItemCode() {
         return itemCode;
     }
@@ -41,5 +43,12 @@ public class MarketTradeRequest {
     public void setTradePassword(String tradePassword) {
         this.tradePassword = tradePassword;
     }
-}
 
+    public String getBulkTokenCode() {
+        return bulkTokenCode;
+    }
+
+    public void setBulkTokenCode(String bulkTokenCode) {
+        this.bulkTokenCode = bulkTokenCode;
+    }
+}
