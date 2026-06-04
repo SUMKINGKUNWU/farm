@@ -383,6 +383,101 @@ class FarmExchangeApplicationTests {
         Assertions.assertTrue(snapshotCount != null && snapshotCount >= 2);
     }
 
+    @Test
+    void privateTradeCreateCancelAndAcceptWork() throws Exception {
+        String sellerId = registerTestUser();
+        String buyerId = registerTestUser();
+        setTradePassword(sellerId);
+        setTradePassword(buyerId);
+        grantInventory(sellerId, "WHEAT", 100);
+
+        MvcResult cancelOfferResult = mockMvc.perform(post("/api/users/" + sellerId + "/private-trades")
+                        .contentType("application/json")
+                        .content("{\"buyerUserId\":\"" + buyerId + "\",\"itemCode\":\"WHEAT\",\"quantity\":10,\"priceAmount\":500,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemCode").value("WHEAT"))
+                .andExpect(jsonPath("$.quantity").value(10))
+                .andExpect(jsonPath("$.priceAmount").value(500))
+                .andExpect(jsonPath("$.taxAmount").value(25))
+                .andExpect(jsonPath("$.status").value("WAIT_ACCEPT"))
+                .andReturn();
+
+        String cancelOfferId = extractJsonString(cancelOfferResult.getResponse().getContentAsString(), "offerId");
+        Long lockedAfterCreate = jdbcTemplate.queryForObject(
+                "select pi.locked_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                sellerId
+        );
+        Assertions.assertEquals(10L, lockedAfterCreate);
+
+        mockMvc.perform(post("/api/users/" + sellerId + "/private-trades/" + cancelOfferId + "/cancel"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        Long lockedAfterCancel = jdbcTemplate.queryForObject(
+                "select pi.locked_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                sellerId
+        );
+        Long availableAfterCancel = jdbcTemplate.queryForObject(
+                "select pi.available_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                sellerId
+        );
+        Assertions.assertEquals(0L, lockedAfterCancel);
+        Assertions.assertEquals(100L, availableAfterCancel);
+
+        MvcResult offerResult = mockMvc.perform(post("/api/users/" + sellerId + "/private-trades")
+                        .contentType("application/json")
+                        .content("{\"buyerUserId\":\"" + buyerId + "\",\"itemCode\":\"WHEAT\",\"quantity\":20,\"priceAmount\":1000,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.taxAmount").value(50))
+                .andReturn();
+
+        String offerId = extractJsonString(offerResult.getResponse().getContentAsString(), "offerId");
+        mockMvc.perform(post("/api/users/" + buyerId + "/private-trades/" + offerId + "/accept")
+                        .contentType("application/json")
+                        .content("{\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.priceAmount").value(1000))
+                .andExpect(jsonPath("$.taxAmount").value(50))
+                .andExpect(jsonPath("$.buyerBalanceAfter").value(8950))
+                .andExpect(jsonPath("$.sellerBalanceAfter").value(11000))
+                .andExpect(jsonPath("$.buyerQuantityAfter").value(20));
+
+        Long sellerAvailable = jdbcTemplate.queryForObject(
+                "select pi.available_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                sellerId
+        );
+        Long sellerLocked = jdbcTemplate.queryForObject(
+                "select pi.locked_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                sellerId
+        );
+        Integer taxCount = jdbcTemplate.queryForObject(
+                "select count(*) from tax_records where ref_id = ?::uuid and trade_type = 'PRIVATE'",
+                Integer.class,
+                offerId
+        );
+        Integer completedCount = jdbcTemplate.queryForObject(
+                "select count(*) from private_trade_offers where id = ?::uuid and status = 'COMPLETED'",
+                Integer.class,
+                offerId
+        );
+
+        Assertions.assertEquals(80L, sellerAvailable);
+        Assertions.assertEquals(0L, sellerLocked);
+        Assertions.assertEquals(1, taxCount);
+        Assertions.assertEquals(1, completedCount);
+
+        mockMvc.perform(post("/api/users/" + buyerId + "/private-trades/" + offerId + "/accept")
+                        .contentType("application/json")
+                        .content("{\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isConflict());
+    }
+
     private String registerTestUser() throws Exception {
         String username = "tester_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
@@ -399,6 +494,13 @@ class FarmExchangeApplicationTests {
 
         String body = registerResult.getResponse().getContentAsString();
         return body.replaceAll(".*\"userId\":\"([^\"]+)\".*", "$1");
+    }
+
+    private void setTradePassword(String userId) throws Exception {
+        mockMvc.perform(post("/api/users/" + userId + "/trade-password")
+                        .contentType("application/json")
+                        .content("{\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk());
     }
 
     private void grantInventory(String userId, String itemCode, long quantity) {
