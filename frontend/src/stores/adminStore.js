@@ -17,7 +17,10 @@ async function requestJson(url, options = {}) {
 
 export const useAdminStore = defineStore('admin', {
   state: () => ({
-    adminUserId: '',
+    username: '',
+    password: '',
+    currentUser: null,
+    accessToken: localStorage.getItem('farm_admin_token') || '',
     targetUserId: '',
     taxConfigs: [],
     assets: null,
@@ -28,6 +31,9 @@ export const useAdminStore = defineStore('admin', {
     error: ''
   }),
   getters: {
+    isLoggedIn(state) {
+      return Boolean(state.accessToken)
+    },
     marketTax(state) {
       return state.taxConfigs.find((item) => item.tradeType === 'MARKET')
     },
@@ -39,6 +45,12 @@ export const useAdminStore = defineStore('admin', {
     }
   },
   actions: {
+    authHeaders() {
+      if (!this.accessToken) {
+        throw new Error('请先登录管理员账号')
+      }
+      return { Authorization: `Bearer ${this.accessToken}` }
+    },
     setMessage(message) {
       this.message = message
       this.error = ''
@@ -61,28 +73,66 @@ export const useAdminStore = defineStore('admin', {
         this.loading = false
       }
     },
-    adminQuery() {
-      if (!this.adminUserId.trim()) {
-        throw new Error('请先填写管理员用户 ID')
-      }
-      return `adminUserId=${encodeURIComponent(this.adminUserId.trim())}`
-    },
     targetId() {
       if (!this.targetUserId.trim()) {
         throw new Error('请先填写目标玩家用户 ID')
       }
       return this.targetUserId.trim()
     },
+    async login() {
+      return this.run(async () => {
+        if (!this.username.trim() || !this.password) {
+          throw new Error('请填写管理员用户名和密码')
+        }
+        const result = await requestJson('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: this.username.trim(),
+            password: this.password
+          })
+        })
+        if (result.role !== 'ADMIN') {
+          throw new Error('该账号不是管理员')
+        }
+        this.currentUser = result
+        this.accessToken = result.accessToken
+        localStorage.setItem('farm_admin_token', result.accessToken)
+        return result
+      }, '管理员登录成功')
+    },
+    logout() {
+      this.currentUser = null
+      this.accessToken = ''
+      this.password = ''
+      this.taxConfigs = []
+      this.assets = null
+      this.trades = []
+      this.issuedToken = null
+      localStorage.removeItem('farm_admin_token')
+      this.setMessage('已退出登录')
+    },
+    async loadMe() {
+      if (!this.accessToken) return null
+      return this.run(async () => {
+        this.currentUser = await requestJson('/api/auth/me', {
+          headers: this.authHeaders()
+        })
+        return this.currentUser
+      })
+    },
     async loadTaxConfigs() {
       return this.run(async () => {
-        this.taxConfigs = await requestJson(`/api/admin/tax-configs?${this.adminQuery()}`)
+        this.taxConfigs = await requestJson('/api/admin/tax-configs', {
+          headers: this.authHeaders()
+        })
         return this.taxConfigs
       }, '税率配置已刷新')
     },
     async updateTaxConfig(tradeType, payload) {
       return this.run(async () => {
-        const config = await requestJson(`/api/admin/tax-configs/${tradeType}?${this.adminQuery()}`, {
+        const config = await requestJson(`/api/admin/tax-configs/${tradeType}`, {
           method: 'PUT',
+          headers: this.authHeaders(),
           body: JSON.stringify(payload)
         })
         const index = this.taxConfigs.findIndex((item) => item.tradeType === config.tradeType)
@@ -93,8 +143,9 @@ export const useAdminStore = defineStore('admin', {
     },
     async issueBulkToken(payload) {
       return this.run(async () => {
-        this.issuedToken = await requestJson(`/api/admin/users/${this.targetId()}/bulk-tokens?${this.adminQuery()}`, {
+        this.issuedToken = await requestJson(`/api/admin/users/${this.targetId()}/bulk-tokens`, {
           method: 'POST',
+          headers: this.authHeaders(),
           body: JSON.stringify(payload)
         })
         return this.issuedToken
@@ -102,13 +153,17 @@ export const useAdminStore = defineStore('admin', {
     },
     async loadAssets() {
       return this.run(async () => {
-        this.assets = await requestJson(`/api/admin/users/${this.targetId()}/assets?${this.adminQuery()}`)
+        this.assets = await requestJson(`/api/admin/users/${this.targetId()}/assets`, {
+          headers: this.authHeaders()
+        })
         return this.assets
       }, '玩家资产已刷新')
     },
     async loadTrades() {
       return this.run(async () => {
-        this.trades = await requestJson(`/api/admin/users/${this.targetId()}/trades?${this.adminQuery()}`)
+        this.trades = await requestJson(`/api/admin/users/${this.targetId()}/trades`, {
+          headers: this.authHeaders()
+        })
         return this.trades
       }, '交易记录已刷新')
     },

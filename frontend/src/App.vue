@@ -10,15 +10,30 @@
       </div>
 
       <div class="identity-card">
-        <label>
-          管理员用户 ID
-          <input v-model.trim="admin.adminUserId" placeholder="role=ADMIN 的用户 UUID" />
-        </label>
-        <label>
-          目标玩家用户 ID
-          <input v-model.trim="admin.targetUserId" placeholder="要查询或发令牌的玩家 UUID" />
-        </label>
-        <button class="button ghost" type="button" @click="loadEverything">刷新控制台</button>
+        <template v-if="!admin.isLoggedIn">
+          <label>
+            管理员用户名
+            <input v-model.trim="admin.username" placeholder="请输入管理员用户名" />
+          </label>
+          <label>
+            登录密码
+            <input v-model="admin.password" type="password" placeholder="请输入登录密码" @keydown.enter="admin.login" />
+          </label>
+          <button class="button ghost" type="button" @click="admin.login">登录管理台</button>
+        </template>
+
+        <template v-else>
+          <div class="login-badge">
+            <span>当前管理员</span>
+            <strong>{{ admin.currentUser?.username || admin.username || '已登录' }}</strong>
+          </div>
+          <label>
+            目标玩家用户 ID
+            <input v-model.trim="admin.targetUserId" placeholder="要查询或发令牌的玩家 UUID" />
+          </label>
+          <button class="button ghost" type="button" @click="loadEverything">刷新控制台</button>
+          <button class="button subtle" type="button" @click="admin.logout">退出登录</button>
+        </template>
       </div>
 
       <nav class="nav">
@@ -32,9 +47,9 @@
     <section class="workspace">
       <header class="hero">
         <div>
-          <span class="eyebrow">MVP Admin Console</span>
-          <h2>把经济系统调参、令牌发放和玩家资产核对放到一张经营台上。</h2>
-          <p>当前仍使用 <b>adminUserId</b> 作为临时管理员校验；后续接入登录态后，这里会替换为 token 鉴权。</p>
+          <span class="eyebrow">Bearer Token Admin Console</span>
+          <h2>用登录态管理经济参数、令牌发放和玩家资产核对。</h2>
+          <p>管理端接口现在通过 <b>Authorization: Bearer token</b> 鉴权，后端会解析 token 并复核数据库中的管理员角色。</p>
         </div>
         <div class="hero-stats">
           <StatCard label="交易站税率" :value="formatRate(admin.marketTax?.rateBasisPoints)" />
@@ -314,6 +329,7 @@ watch(() => admin.taxConfigs, syncTaxForm, { deep: true })
 watch(() => admin.trades, () => nextTick(renderChart), { deep: true })
 
 onMounted(() => {
+  admin.loadMe().catch(() => admin.logout())
   renderChart()
   window.addEventListener('resize', renderChart)
 })

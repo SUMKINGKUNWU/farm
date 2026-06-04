@@ -373,6 +373,34 @@ h3 {
   box-shadow: none;
 }
 
+.button.subtle {
+  color: rgba(255, 248, 232, .82);
+  background: rgba(255, 248, 232, .08);
+  border: 1px solid rgba(255, 248, 232, .16);
+  box-shadow: none;
+}
+
+.login-badge {
+  padding: 13px;
+  border: 1px solid rgba(255, 248, 232, .16);
+  border-radius: 18px;
+  background: rgba(255, 248, 232, .08);
+}
+
+.login-badge span {
+  display: block;
+  color: rgba(255, 248, 232, .62);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.login-badge strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--paper-strong);
+  font-size: 18px;
+}
+
 .muted {
   color: var(--muted);
   line-height: 1.8;

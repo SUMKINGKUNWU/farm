@@ -1,5 +1,7 @@
 package com.farm.exchange.user;
 
+import com.farm.exchange.auth.AuthPrincipal;
+import com.farm.exchange.auth.AuthTokenService;
 import com.farm.exchange.common.ApiException;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
@@ -18,10 +20,12 @@ public class UserService {
 
     private final JdbcTemplate jdbcTemplate;
     private final PasswordEncoder passwordEncoder;
+    private final AuthTokenService authTokenService;
 
-    public UserService(JdbcTemplate jdbcTemplate, PasswordEncoder passwordEncoder) {
+    public UserService(JdbcTemplate jdbcTemplate, PasswordEncoder passwordEncoder, AuthTokenService authTokenService) {
         this.jdbcTemplate = jdbcTemplate;
         this.passwordEncoder = passwordEncoder;
+        this.authTokenService = authTokenService;
     }
 
     @Transactional
@@ -54,6 +58,53 @@ public class UserService {
         );
 
         return new RegisterResponse(userId, request.getUsername(), request.getNickname(), INITIAL_BALANCE, farmSlots, ranchSlots, false);
+    }
+
+    public LoginResponse login(LoginRequest request) {
+        LoginUser user = jdbcTemplate.query(
+                "select id, username, nickname, password_hash, role, status from app_users where username = ?",
+                rs -> {
+                    if (!rs.next()) {
+                        throw new ApiException(HttpStatus.UNAUTHORIZED, "用户名或密码错误");
+                    }
+                    return new LoginUser(
+                            UUID.fromString(rs.getString("id")),
+                            rs.getString("username"),
+                            rs.getString("nickname"),
+                            rs.getString("password_hash"),
+                            rs.getString("role"),
+                            rs.getString("status")
+                    );
+                },
+                request.getUsername()
+        );
+        if (!"ACTIVE".equals(user.status)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "用户状态不可用");
+        }
+        if (!passwordEncoder.matches(request.getPassword(), user.passwordHash)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "用户名或密码错误");
+        }
+        String token = authTokenService.issue(new AuthPrincipal(user.userId, user.username, user.role));
+        return new LoginResponse(user.userId, user.username, user.nickname, user.role, "Bearer", token);
+    }
+
+    public CurrentUserResponse currentUser(UUID userId) {
+        return jdbcTemplate.query(
+                "select id, username, nickname, role, status from app_users where id = ?",
+                rs -> {
+                    if (!rs.next()) {
+                        throw new ApiException(HttpStatus.NOT_FOUND, "用户不存在");
+                    }
+                    return new CurrentUserResponse(
+                            UUID.fromString(rs.getString("id")),
+                            rs.getString("username"),
+                            rs.getString("nickname"),
+                            rs.getString("role"),
+                            rs.getString("status")
+                    );
+                },
+                userId
+        );
     }
 
     @Transactional
@@ -110,5 +161,22 @@ public class UserService {
             );
         }
     }
-}
 
+    private static class LoginUser {
+        private final UUID userId;
+        private final String username;
+        private final String nickname;
+        private final String passwordHash;
+        private final String role;
+        private final String status;
+
+        private LoginUser(UUID userId, String username, String nickname, String passwordHash, String role, String status) {
+            this.userId = userId;
+            this.username = username;
+            this.nickname = nickname;
+            this.passwordHash = passwordHash;
+            this.role = role;
+            this.status = status;
+        }
+    }
+}

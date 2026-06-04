@@ -26,6 +26,8 @@ class FarmExchangeApplicationTests {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    private String lastRegisteredUsername;
+
     @Test
     void contextLoads() {
     }
@@ -74,6 +76,25 @@ class FarmExchangeApplicationTests {
         );
         Assertions.assertNotNull(tradePasswordHash);
         Assertions.assertNotEquals("654321", tradePasswordHash);
+    }
+
+    @Test
+    void loginReturnsTokenAndCurrentUser() throws Exception {
+        String userId = registerTestUser();
+        String username = lastRegisteredUsername;
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType("application/json")
+                        .content("{\"username\":\"" + username + "\",\"password\":\"bad-password\"}"))
+                .andExpect(status().isUnauthorized());
+
+        String token = login(username);
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(userId))
+                .andExpect(jsonPath("$.username").value(username))
+                .andExpect(jsonPath("$.role").value("PLAYER"));
     }
 
     @Test
@@ -590,23 +611,27 @@ class FarmExchangeApplicationTests {
     @Test
     void adminCanUpdateTaxIssueTokenAndQueryUserAssetsTrades() throws Exception {
         String adminId = registerTestUser();
+        String adminUsername = lastRegisteredUsername;
         String playerId = registerTestUser();
+        String playerUsername = lastRegisteredUsername;
         makeAdmin(adminId);
         setTradePassword(playerId);
         jdbcTemplate.update("update items set current_price = base_price where code = 'WHEAT'");
+        String adminToken = login(adminUsername);
+        String playerToken = login(playerUsername);
 
         mockMvc.perform(get("/api/admin/tax-configs")
-                        .param("adminUserId", playerId))
+                        .header("Authorization", "Bearer " + playerToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("需要管理员权限"));
 
         mockMvc.perform(get("/api/admin/tax-configs")
-                        .param("adminUserId", adminId))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3));
 
         mockMvc.perform(put("/api/admin/tax-configs/MARKET")
-                        .param("adminUserId", adminId)
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType("application/json")
                         .content("{\"rateBasisPoints\":250,\"reason\":\"测试调整交易站税率\"}"))
                 .andExpect(status().isOk())
@@ -615,7 +640,7 @@ class FarmExchangeApplicationTests {
                 .andExpect(jsonPath("$.updatedBy").value(adminId));
 
         MvcResult tokenResult = mockMvc.perform(post("/api/admin/users/" + playerId + "/bulk-tokens")
-                        .param("adminUserId", adminId)
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType("application/json")
                         .content("{\"allowedItemType\":\"HARVEST\",\"singleTradeLimit\":200000,\"totalLimit\":200000,\"remainingUses\":2,\"expireHours\":24}"))
                 .andExpect(status().isOk())
@@ -630,13 +655,13 @@ class FarmExchangeApplicationTests {
                 .andExpect(jsonPath("$.taxAmount").value(62));
 
         mockMvc.perform(get("/api/admin/users/" + playerId + "/assets")
-                        .param("adminUserId", adminId))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(playerId))
                 .andExpect(jsonPath("$.inventory[0].itemCode").value("WHEAT"));
 
         mockMvc.perform(get("/api/admin/users/" + playerId + "/trades")
-                        .param("adminUserId", adminId))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].tradeSource").value("MARKET"))
                 .andExpect(jsonPath("$[0].itemCode").value("WHEAT"));
@@ -659,6 +684,7 @@ class FarmExchangeApplicationTests {
 
     private String registerTestUser() throws Exception {
         String username = "tester_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        lastRegisteredUsername = username;
 
         MvcResult registerResult = mockMvc.perform(post("/api/auth/register")
                         .contentType("application/json")
@@ -680,6 +706,17 @@ class FarmExchangeApplicationTests {
                         .contentType("application/json")
                         .content("{\"tradePassword\":\"654321\"}"))
                 .andExpect(status().isOk());
+    }
+
+    private String login(String username) throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType("application/json")
+                        .content("{\"username\":\"" + username + "\",\"password\":\"123456\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.accessToken").isString())
+                .andReturn();
+        return extractJsonString(loginResult.getResponse().getContentAsString(), "accessToken");
     }
 
     private void grantInventory(String userId, String itemCode, long quantity) {
