@@ -234,6 +234,65 @@ class FarmExchangeApplicationTests {
         Assertions.assertEquals(2, harvestLedgerCount);
     }
 
+    @Test
+    void shopPurchaseRequiresTradePasswordAndUpdatesWalletInventory() throws Exception {
+        String userId = registerTestUser();
+
+        mockMvc.perform(post("/api/users/" + userId + "/shop/purchase")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT_SEED\",\"quantity\":3,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("请先设置交易密码"));
+
+        mockMvc.perform(post("/api/users/" + userId + "/trade-password")
+                        .contentType("application/json")
+                        .content("{\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/users/" + userId + "/shop/purchase")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT_SEED\",\"quantity\":3,\"tradePassword\":\"000000\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("交易密码错误"));
+
+        mockMvc.perform(post("/api/users/" + userId + "/shop/purchase")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":1,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("该商品不能在商店购买"));
+
+        mockMvc.perform(post("/api/users/" + userId + "/shop/purchase")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT_SEED\",\"quantity\":3,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.itemCode").value("WHEAT_SEED"))
+                .andExpect(jsonPath("$.quantity").value(3))
+                .andExpect(jsonPath("$.unitPrice").value(80))
+                .andExpect(jsonPath("$.totalAmount").value(240))
+                .andExpect(jsonPath("$.balanceAfter").value(9760))
+                .andExpect(jsonPath("$.availableQuantityAfter").value(3));
+
+        Long balance = jdbcTemplate.queryForObject(
+                "select balance from wallets where user_id = ?::uuid",
+                Long.class,
+                userId
+        );
+        Long seedQuantity = jdbcTemplate.queryForObject(
+                "select pi.available_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT_SEED'",
+                Long.class,
+                userId
+        );
+        Integer ledgerCount = jdbcTemplate.queryForObject(
+                "select count(*) from asset_ledger where user_id = ?::uuid and reason = 'SHOP_PURCHASE'",
+                Integer.class,
+                userId
+        );
+
+        Assertions.assertEquals(9760L, balance);
+        Assertions.assertEquals(3L, seedQuantity);
+        Assertions.assertEquals(2, ledgerCount);
+    }
+
     private String registerTestUser() throws Exception {
         String username = "tester_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
