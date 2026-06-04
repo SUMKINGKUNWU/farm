@@ -1,0 +1,19 @@
+{
+  "name": "farm-exchange-frontend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 8010",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 8011"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "vite": "^5.4.19",
+    "vue": "^3.5.16",
+    "pinia": "^2.3.1",
+    "echarts": "^5.6.0"
+  },
+  "devDependencies": {}
+}
