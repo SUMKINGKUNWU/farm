@@ -7,6 +7,7 @@ import com.farm.exchange.common.ErrorCode;
 import com.farm.exchange.user.TradePasswordService;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -60,6 +61,39 @@ public class PrivateTradeService {
         );
 
         return new PrivateTradeResponse(offerId, sellerUserId, request.getBuyerUserId(), item.id, item.code, request.getQuantity(), request.getPriceAmount(), taxAmount, "WAIT_ACCEPT", expiresAt);
+    }
+
+    public List<PrivateTradeOfferResponse> offers(UUID userId) {
+        ensureActiveUser(userId);
+        return jdbcTemplate.query(
+                "select p.id, p.seller_user_id, seller.username as seller_username, p.buyer_user_id, buyer.username as buyer_username, " +
+                        "p.item_id, i.code as item_code, p.quantity, p.price_amount, p.tax_amount, p.status, p.expires_at, p.accepted_at, p.cancelled_at, p.created_at " +
+                        "from private_trade_offers p " +
+                        "join app_users seller on seller.id = p.seller_user_id " +
+                        "join app_users buyer on buyer.id = p.buyer_user_id " +
+                        "join items i on i.id = p.item_id " +
+                        "where p.seller_user_id = ? or p.buyer_user_id = ? " +
+                        "order by p.created_at desc limit 100",
+                (rs, rowNum) -> new PrivateTradeOfferResponse(
+                        UUID.fromString(rs.getString("id")),
+                        UUID.fromString(rs.getString("seller_user_id")),
+                        rs.getString("seller_username"),
+                        UUID.fromString(rs.getString("buyer_user_id")),
+                        rs.getString("buyer_username"),
+                        UUID.fromString(rs.getString("item_id")),
+                        rs.getString("item_code"),
+                        rs.getLong("quantity"),
+                        rs.getLong("price_amount"),
+                        rs.getLong("tax_amount"),
+                        rs.getString("status"),
+                        rs.getObject("expires_at", OffsetDateTime.class),
+                        rs.getObject("accepted_at", OffsetDateTime.class),
+                        rs.getObject("cancelled_at", OffsetDateTime.class),
+                        rs.getObject("created_at", OffsetDateTime.class)
+                ),
+                userId,
+                userId
+        );
     }
 
     @Transactional

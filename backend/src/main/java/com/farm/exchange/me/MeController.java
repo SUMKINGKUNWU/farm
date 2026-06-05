@@ -15,6 +15,7 @@ import com.farm.exchange.market.MarketTradeRequest;
 import com.farm.exchange.market.MarketTradeResponse;
 import com.farm.exchange.private_trade.AcceptPrivateTradeRequest;
 import com.farm.exchange.private_trade.CreatePrivateTradeRequest;
+import com.farm.exchange.private_trade.PrivateTradeOfferResponse;
 import com.farm.exchange.private_trade.PrivateTradeResponse;
 import com.farm.exchange.private_trade.PrivateTradeService;
 import com.farm.exchange.private_trade.PrivateTradeSettlementResponse;
@@ -148,6 +149,11 @@ public class MeController {
     public MarketQuoteResponse quote(@RequestHeader(value = "Authorization", required = false) String authorization, @PathVariable String itemCode) {
         currentUserId(authorization);
         return marketService.quote(itemCode);
+    }
+
+    @GetMapping("/private-trades")
+    public List<PrivateTradeOfferResponse> privateTrades(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return privateTradeService.offers(currentUserId(authorization));
     }
 
     @PostMapping("/private-trades")

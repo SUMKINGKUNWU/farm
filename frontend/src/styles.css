@@ -627,6 +627,50 @@ h3 {
   margin-top: 16px;
 }
 
+.private-trade-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.private-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(255, 248, 232, .58);
+}
+
+.private-form h4,
+.private-form .section-kicker,
+.private-form .muted {
+  grid-column: 1 / -1;
+}
+
+.private-form h4 {
+  margin: -4px 0 2px;
+  font-size: 24px;
+}
+
+.accept-box {
+  grid-template-columns: 1fr;
+  color: var(--paper-strong);
+  background:
+    linear-gradient(145deg, rgba(36, 26, 16, .95), rgba(49, 75, 47, .9)),
+    radial-gradient(circle at top right, rgba(219, 169, 74, .22), transparent 42%);
+}
+
+.accept-box .muted {
+  color: rgba(255, 248, 232, .68);
+}
+
+.private-table table {
+  min-width: 980px;
+}
+
 .button.mini {
   padding: 8px 10px;
   border-radius: 12px;
@@ -704,7 +748,9 @@ td small {
   .compact-form,
   .production-grid,
   .production-toolbar,
-  .field-board {
+  .field-board,
+  .private-trade-layout,
+  .private-form {
     grid-template-columns: 1fr;
   }
 

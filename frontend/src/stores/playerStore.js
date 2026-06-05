@@ -31,6 +31,7 @@ export const usePlayerStore = defineStore('player', {
     growthInstances: [],
     quote: null,
     bulkTokens: [],
+    privateTrades: [],
     lastProduction: null,
     lastTrade: null,
     loading: false,
@@ -147,6 +148,7 @@ export const usePlayerStore = defineStore('player', {
       this.inventory = []
       this.growthInstances = []
       this.bulkTokens = []
+      this.privateTrades = []
       this.lastProduction = null
       this.lastTrade = null
       this.setMessage('已退出玩家账号')
@@ -170,13 +172,14 @@ export const usePlayerStore = defineStore('player', {
     async loadDashboard() {
       return this.run(async () => {
         const headers = this.authHeaders()
-        const [summary, farm, ranch, inventory, growthInstances, bulkTokens] = await Promise.all([
+        const [summary, farm, ranch, inventory, growthInstances, bulkTokens, privateTrades] = await Promise.all([
           requestJson('/api/me/summary', { headers }),
           requestJson('/api/me/farm/plots', { headers }),
           requestJson('/api/me/ranch/slots', { headers }),
           requestJson('/api/me/inventory', { headers }),
           requestJson('/api/me/growth', { headers }),
-          requestJson('/api/me/bulk-tokens', { headers })
+          requestJson('/api/me/bulk-tokens', { headers }),
+          requestJson('/api/me/private-trades', { headers })
         ])
         this.summary = summary
         this.farm = farm
@@ -184,6 +187,7 @@ export const usePlayerStore = defineStore('player', {
         this.inventory = inventory
         this.growthInstances = growthInstances
         this.bulkTokens = bulkTokens
+        this.privateTrades = privateTrades
         return summary
       }, '玩家数据已刷新')
     },
@@ -255,6 +259,35 @@ export const usePlayerStore = defineStore('player', {
         await this.loadDashboard()
         return this.lastTrade
       }, side === 'BUY' ? '交易站买入成功' : '交易站卖出成功')
+    },
+    async createPrivateTrade(payload) {
+      return this.run(async () => {
+        await requestJson('/api/me/private-trades', {
+          method: 'POST',
+          headers: this.authHeaders(),
+          body: JSON.stringify(payload)
+        })
+        await this.loadDashboard()
+      }, '私下交易报价已创建')
+    },
+    async acceptPrivateTrade(offerId, payload) {
+      return this.run(async () => {
+        await requestJson(`/api/me/private-trades/${offerId}/accept`, {
+          method: 'POST',
+          headers: this.authHeaders(),
+          body: JSON.stringify(payload)
+        })
+        await this.loadDashboard()
+      }, '私下交易已成交')
+    },
+    async cancelPrivateTrade(offerId) {
+      return this.run(async () => {
+        await requestJson(`/api/me/private-trades/${offerId}/cancel`, {
+          method: 'POST',
+          headers: this.authHeaders()
+        })
+        await this.loadDashboard()
+      }, '私下交易报价已取消')
     }
   }
 })

@@ -22,6 +22,7 @@
         <a href="#player-shop">商店</a>
         <a href="#player-fields">田地牧场</a>
         <a href="#player-market">交易站</a>
+        <a href="#player-private">私下交易</a>
       </nav>
       <nav class="nav" v-else>
         <a href="#tax">税率</a>
@@ -79,7 +80,14 @@ const playerForms = reactive({
   marketQuantity: 10,
   marketTradePassword: '',
   marketBulkTokenCode: '',
-  harvestGrowthId: ''
+  harvestGrowthId: '',
+  privateBuyerUserId: '',
+  privateItemCode: 'WHEAT',
+  privateQuantity: 10,
+  privatePriceAmount: 500,
+  privateTradePassword: '',
+  privateAcceptPassword: '',
+  privateBulkTokenCode: ''
 })
 
 function formatRate(value) {
@@ -167,6 +175,23 @@ async function tradeMarket(side) {
     quantity: playerForms.marketQuantity,
     tradePassword: playerForms.marketTradePassword,
     bulkTokenCode: playerForms.marketBulkTokenCode || null
+  })
+}
+
+async function createPrivateTrade() {
+  await player.createPrivateTrade({
+    buyerUserId: playerForms.privateBuyerUserId,
+    itemCode: playerForms.privateItemCode,
+    quantity: playerForms.privateQuantity,
+    priceAmount: playerForms.privatePriceAmount,
+    tradePassword: playerForms.privateTradePassword
+  })
+}
+
+async function acceptPrivateTrade(offerId) {
+  await player.acceptPrivateTrade(offerId, {
+    tradePassword: playerForms.privateAcceptPassword,
+    bulkTokenCode: playerForms.privateBulkTokenCode || null
   })
 }
 
@@ -291,7 +316,9 @@ const PlayerWorkspace = defineComponent({
       startFarmProduction,
       startRanchProduction,
       harvestGrowth,
-      tradeMarket
+      tradeMarket,
+      createPrivateTrade,
+      acceptPrivateTrade
     }
   },
   template: `
@@ -429,6 +456,55 @@ const PlayerWorkspace = defineComponent({
           <p>24h 成交：{{ player.quote?.volume24h ?? '-' }} 件 · {{ player.quote?.tradeCount24h ?? '-' }} 笔</p>
           <p>可用令牌：{{ player.bulkTokens.length }} 个</p>
         </article>
+      </section>
+
+      <section id="player-private" class="panel">
+        <div class="panel-heading">
+          <div><span class="section-kicker">Private Trade</span><h3>私下交易报价</h3></div>
+          <button class="button ghost" type="button" :disabled="player.loading" @click="player.loadDashboard">刷新报价</button>
+        </div>
+        <div class="private-trade-layout">
+          <form class="private-form" @submit.prevent="createPrivateTrade">
+            <span class="section-kicker">Create Offer</span>
+            <h4>创建卖出报价</h4>
+            <label>买方用户 ID<input v-model.trim="playerForms.privateBuyerUserId" placeholder="对方玩家 UUID" /></label>
+            <label>商品<select v-model="playerForms.privateItemCode"><option v-for="item in harvestOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ item.code }}</option></select></label>
+            <label>数量<input v-model.number="playerForms.privateQuantity" type="number" min="1" /></label>
+            <label>总价金币<input v-model.number="playerForms.privatePriceAmount" type="number" min="1" /></label>
+            <label>交易密码<input v-model="playerForms.privateTradePassword" type="password" placeholder="卖方交易密码" /></label>
+            <button class="button wide" type="submit" :disabled="player.loading">创建报价并冻结库存</button>
+          </form>
+          <article class="private-form accept-box">
+            <span class="section-kicker">Accept Offer</span>
+            <h4>接受报价配置</h4>
+            <p class="muted">买方接受 WAIT_ACCEPT 报价时使用。大宗交易令牌非必填，触发大宗阈值时必填。</p>
+            <label>交易密码<input v-model="playerForms.privateAcceptPassword" type="password" placeholder="买方交易密码" /></label>
+            <label>大宗令牌<input v-model.trim="playerForms.privateBulkTokenCode" placeholder="可选" /></label>
+          </article>
+        </div>
+        <div class="table-wrap private-table">
+          <table>
+            <thead><tr><th>报价</th><th>角色</th><th>对方</th><th>商品</th><th>数量</th><th>总价</th><th>税费</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="offer in player.privateTrades" :key="offer.offerId">
+                <td><small>{{ offer.offerId }}</small></td>
+                <td>{{ offer.sellerUserId === player.currentUser?.userId ? '卖方' : '买方' }}</td>
+                <td>{{ offer.sellerUserId === player.currentUser?.userId ? offer.buyerUsername : offer.sellerUsername }}<small>{{ offer.sellerUserId === player.currentUser?.userId ? offer.buyerUserId : offer.sellerUserId }}</small></td>
+                <td>{{ offer.itemCode }}</td>
+                <td>{{ offer.quantity }}</td>
+                <td>{{ formatMoney(offer.priceAmount) }}</td>
+                <td>{{ formatMoney(offer.taxAmount) }}</td>
+                <td>{{ offer.status }}<small>到期 {{ formatDate(offer.expiresAt) }}</small></td>
+                <td>
+                  <button v-if="offer.buyerUserId === player.currentUser?.userId && offer.status === 'WAIT_ACCEPT'" class="button mini" type="button" :disabled="player.loading" @click="acceptPrivateTrade(offer.offerId)">接受</button>
+                  <button v-else-if="offer.sellerUserId === player.currentUser?.userId && offer.status === 'WAIT_ACCEPT'" class="button ghost mini" type="button" :disabled="player.loading" @click="player.cancelPrivateTrade(offer.offerId)">取消</button>
+                  <span v-else class="muted">无操作</span>
+                </td>
+              </tr>
+              <tr v-if="!player.privateTrades.length"><td colspan="9">暂无私下交易报价</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   `

@@ -2,6 +2,8 @@ package com.farm.exchange.private_trade;
 
 import java.util.UUID;
 import javax.validation.Valid;
+import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +18,11 @@ public class PrivateTradeController {
 
     public PrivateTradeController(PrivateTradeService privateTradeService) {
         this.privateTradeService = privateTradeService;
+    }
+
+    @GetMapping
+    public List<PrivateTradeOfferResponse> offers(@PathVariable UUID userId) {
+        return privateTradeService.offers(userId);
     }
 
     @PostMapping
@@ -33,4 +40,3 @@ public class PrivateTradeController {
         return privateTradeService.cancel(userId, offerId);
     }
 }
-

@@ -561,6 +561,17 @@ class FarmExchangeApplicationTests {
                 .andReturn();
 
         String cancelOfferId = extractJsonString(cancelOfferResult.getResponse().getContentAsString(), "offerId");
+        mockMvc.perform(get("/api/users/" + sellerId + "/private-trades"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].offerId").value(cancelOfferId))
+                .andExpect(jsonPath("$[0].sellerUserId").value(sellerId))
+                .andExpect(jsonPath("$[0].buyerUserId").value(buyerId))
+                .andExpect(jsonPath("$[0].itemCode").value("WHEAT"))
+                .andExpect(jsonPath("$[0].status").value("WAIT_ACCEPT"));
+        mockMvc.perform(get("/api/users/" + buyerId + "/private-trades"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].offerId").value(cancelOfferId));
+
         Long lockedAfterCreate = jdbcTemplate.queryForObject(
                 "select pi.locked_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
                 Long.class,
@@ -571,6 +582,9 @@ class FarmExchangeApplicationTests {
         mockMvc.perform(post("/api/users/" + sellerId + "/private-trades/" + cancelOfferId + "/cancel"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
+        mockMvc.perform(get("/api/users/" + sellerId + "/private-trades"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("CANCELLED"));
 
         Long lockedAfterCancel = jdbcTemplate.queryForObject(
                 "select pi.locked_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
@@ -593,6 +607,11 @@ class FarmExchangeApplicationTests {
                 .andReturn();
 
         String offerId = extractJsonString(offerResult.getResponse().getContentAsString(), "offerId");
+        mockMvc.perform(get("/api/users/" + buyerId + "/private-trades"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].offerId").value(offerId))
+                .andExpect(jsonPath("$[0].status").value("WAIT_ACCEPT"));
+
         mockMvc.perform(post("/api/users/" + buyerId + "/private-trades/" + offerId + "/accept")
                         .contentType("application/json")
                         .content("{\"tradePassword\":\"654321\"}"))
@@ -603,6 +622,9 @@ class FarmExchangeApplicationTests {
                 .andExpect(jsonPath("$.buyerBalanceAfter").value(8950))
                 .andExpect(jsonPath("$.sellerBalanceAfter").value(11000))
                 .andExpect(jsonPath("$.buyerQuantityAfter").value(20));
+        mockMvc.perform(get("/api/users/" + buyerId + "/private-trades"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("COMPLETED"));
 
         Long sellerAvailable = jdbcTemplate.queryForObject(
                 "select pi.available_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
