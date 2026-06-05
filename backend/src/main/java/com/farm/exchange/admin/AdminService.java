@@ -3,6 +3,7 @@ package com.farm.exchange.admin;
 import com.farm.exchange.bulk.BulkTokenResponse;
 import com.farm.exchange.bulk.BulkTokenService;
 import com.farm.exchange.common.ApiException;
+import com.farm.exchange.common.ErrorCode;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -43,7 +44,7 @@ public class AdminService {
         ensureAdmin(adminUserId);
         String normalizedTradeType = tradeType.trim().toUpperCase(Locale.ROOT);
         if (!"MARKET".equals(normalizedTradeType) && !"PRIVATE".equals(normalizedTradeType) && !"BULK".equals(normalizedTradeType)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "不支持的税率类型");
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的税率类型");
         }
 
         int updated = jdbcTemplate.update(
@@ -54,7 +55,7 @@ public class AdminService {
                 normalizedTradeType
         );
         if (updated != 1) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "税率配置不存在");
+            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.CONFIG_MISSING, "税率配置不存在");
         }
         writeAuditLog(adminUserId, "UPDATE_TAX_CONFIG", "TAX_CONFIG", null, request.getReason());
         return taxConfig(normalizedTradeType);
@@ -122,7 +123,7 @@ public class AdminService {
                 "select trade_type, rate_basis_points, updated_by, updated_reason, effective_at, updated_at from tax_config where trade_type = ?",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "税率配置不存在");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.CONFIG_MISSING, "税率配置不存在");
                     }
                     return new TaxConfigResponse(
                             rs.getString("trade_type"),
@@ -143,7 +144,7 @@ public class AdminService {
                         "from app_users u join wallets w on w.user_id = u.id where u.id = ?",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "用户不存在");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在");
                     }
                     return new UserAssetHeader(
                             UUID.fromString(rs.getString("id")),
@@ -165,14 +166,14 @@ public class AdminService {
                 adminUserId
         );
         if (exists == null || exists == 0) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "需要管理员权限");
+            throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.PERMISSION_DENIED, "需要管理员权限");
         }
     }
 
     private void ensureUserExists(UUID userId) {
         Integer exists = jdbcTemplate.queryForObject("select count(*) from app_users where id = ?", Integer.class, userId);
         if (exists == null || exists == 0) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "用户不存在");
+            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在");
         }
     }
 

@@ -3,6 +3,7 @@ package com.farm.exchange.auth;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.farm.exchange.common.ApiException;
+import com.farm.exchange.common.ErrorCode;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
@@ -57,7 +58,7 @@ public class AuthTokenService {
 
     public AuthPrincipal require(String authorizationHeader) {
         if (!StringUtils.hasText(authorizationHeader) || !authorizationHeader.startsWith("Bearer ")) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "请先登录");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_REQUIRED, "请先登录");
         }
         return parse(authorizationHeader.substring("Bearer ".length()).trim());
     }
@@ -66,17 +67,17 @@ public class AuthTokenService {
         try {
             String[] parts = token.split("\\.");
             if (parts.length != 3) {
-                throw new ApiException(HttpStatus.UNAUTHORIZED, "登录凭证格式不正确");
+                throw new ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_INVALID, "登录凭证格式不正确");
             }
             String expectedSignature = sign(parts[0] + "." + parts[1]);
             if (!constantTimeEquals(expectedSignature, parts[2])) {
-                throw new ApiException(HttpStatus.UNAUTHORIZED, "登录凭证签名无效");
+                throw new ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_INVALID, "登录凭证签名无效");
             }
 
             Map<String, Object> payload = objectMapper.readValue(base64Decode(parts[1]), MAP_TYPE);
             long expiresAt = ((Number) payload.get("exp")).longValue();
             if (expiresAt < Instant.now().getEpochSecond()) {
-                throw new ApiException(HttpStatus.UNAUTHORIZED, "登录凭证已过期");
+                throw new ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_EXPIRED, "登录凭证已过期");
             }
 
             return new AuthPrincipal(
@@ -87,7 +88,7 @@ public class AuthTokenService {
         } catch (ApiException exception) {
             throw exception;
         } catch (Exception exception) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "登录凭证无效");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_INVALID, "登录凭证无效");
         }
     }
 
@@ -95,7 +96,7 @@ public class AuthTokenService {
         try {
             return base64Encode(objectMapper.writeValueAsBytes(value));
         } catch (Exception exception) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "生成登录凭证失败");
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.CONFIG_MISSING, "生成登录凭证失败");
         }
     }
 
@@ -105,7 +106,7 @@ public class AuthTokenService {
             mac.init(new SecretKeySpec(secret, HMAC_ALGORITHM));
             return base64Encode(mac.doFinal(value.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception exception) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "签名登录凭证失败");
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.CONFIG_MISSING, "签名登录凭证失败");
         }
     }
 

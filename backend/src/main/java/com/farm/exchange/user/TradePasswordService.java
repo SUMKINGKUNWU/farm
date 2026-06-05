@@ -1,6 +1,7 @@
 package com.farm.exchange.user;
 
 import com.farm.exchange.common.ApiException;
+import com.farm.exchange.common.ErrorCode;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -24,7 +25,7 @@ public class TradePasswordService {
                 "select trade_password_hash, trade_password_locked_until from app_users where id = ? and status = 'ACTIVE'",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "用户不存在或状态不可用");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在或状态不可用");
                     }
                     return new TradePasswordSnapshot(
                             rs.getString("trade_password_hash"),
@@ -35,17 +36,17 @@ public class TradePasswordService {
         );
 
         if (snapshot.hash == null || snapshot.hash.trim().isEmpty()) {
-            throw new ApiException(HttpStatus.CONFLICT, "请先设置交易密码");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.TRADE_PASSWORD_REQUIRED, "请先设置交易密码");
         }
         if (snapshot.lockedUntil != null && snapshot.lockedUntil.isAfter(OffsetDateTime.now())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "交易密码已锁定，请稍后再试");
+            throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.TRADE_PASSWORD_LOCKED, "交易密码已锁定，请稍后再试");
         }
         if (!passwordEncoder.matches(rawTradePassword, snapshot.hash)) {
             jdbcTemplate.update(
                     "update app_users set trade_password_failed_count = trade_password_failed_count + 1, updated_at = now(), version = version + 1 where id = ?",
                     userId
             );
-            throw new ApiException(HttpStatus.FORBIDDEN, "交易密码错误");
+            throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.TRADE_PASSWORD_INVALID, "交易密码错误");
         }
 
         jdbcTemplate.update(
@@ -64,4 +65,3 @@ public class TradePasswordService {
         }
     }
 }
-

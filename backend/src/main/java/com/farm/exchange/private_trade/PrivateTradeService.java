@@ -3,6 +3,7 @@ package com.farm.exchange.private_trade;
 import com.farm.exchange.bulk.BulkTokenService;
 import com.farm.exchange.bulk.BulkTradeItem;
 import com.farm.exchange.common.ApiException;
+import com.farm.exchange.common.ErrorCode;
 import com.farm.exchange.user.TradePasswordService;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
@@ -28,7 +29,7 @@ public class PrivateTradeService {
     @Transactional
     public PrivateTradeResponse create(UUID sellerUserId, CreatePrivateTradeRequest request) {
         if (sellerUserId.equals(request.getBuyerUserId())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "不能和自己进行私下交易");
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不能和自己进行私下交易");
         }
         tradePasswordService.verify(sellerUserId, request.getTradePassword());
         ensureActiveUser(request.getBuyerUserId());
@@ -66,14 +67,14 @@ public class PrivateTradeService {
         tradePasswordService.verify(buyerUserId, request.getTradePassword());
         OfferSnapshot offer = lockOffer(offerId);
         if (!buyerUserId.equals(offer.buyerUserId)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "只有买方可以接受该报价");
+            throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.PERMISSION_DENIED, "只有买方可以接受该报价");
         }
         if (!"WAIT_ACCEPT".equals(offer.status)) {
-            throw new ApiException(HttpStatus.CONFLICT, "报价单当前不可接受");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "报价单当前不可接受");
         }
         if (offer.expiresAt.isBefore(OffsetDateTime.now())) {
             expireOffer(offer);
-            throw new ApiException(HttpStatus.CONFLICT, "报价单已过期");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "报价单已过期");
         }
         UUID bulkTokenId = bulkTokenService.consumeIfRequired(
                 buyerUserId,
@@ -87,7 +88,7 @@ public class PrivateTradeService {
         WalletSnapshot sellerWallet = lockedWallet(offer.sellerUserId);
         long buyerCost = offer.priceAmount + offer.taxAmount;
         if (buyerWallet.balance < buyerCost) {
-            throw new ApiException(HttpStatus.CONFLICT, "买方金币不足");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.INSUFFICIENT_BALANCE, "买方金币不足");
         }
 
         long buyerBalanceAfter = buyerWallet.balance - buyerCost;
@@ -125,10 +126,10 @@ public class PrivateTradeService {
     public PrivateTradeResponse cancel(UUID sellerUserId, UUID offerId) {
         OfferSnapshot offer = lockOffer(offerId);
         if (!sellerUserId.equals(offer.sellerUserId)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "只有卖方可以取消该报价");
+            throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.PERMISSION_DENIED, "只有卖方可以取消该报价");
         }
         if (!"WAIT_ACCEPT".equals(offer.status)) {
-            throw new ApiException(HttpStatus.CONFLICT, "报价单当前不可取消");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "报价单当前不可取消");
         }
         releaseSellerInventory(offer.sellerUserId, offer.itemId, offer.quantity);
         jdbcTemplate.update(
@@ -152,7 +153,7 @@ public class PrivateTradeService {
                 userId
         );
         if (exists == null || exists == 0) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "用户不存在或状态不可用");
+            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在或状态不可用");
         }
     }
 
@@ -161,14 +162,14 @@ public class PrivateTradeService {
                 "select id, code, item_type, trade_enabled from items where code = ? and status = 'ACTIVE'",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "交易商品不存在或不可用");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.ITEM_NOT_FOUND, "交易商品不存在或不可用");
                     }
                     PrivateTradeItem item = new PrivateTradeItem(UUID.fromString(rs.getString("id")), rs.getString("code"), rs.getString("item_type"), rs.getBoolean("trade_enabled"));
                     if (!item.tradeEnabled) {
-                        throw new ApiException(HttpStatus.CONFLICT, "商品暂不可交易");
+                        throw new ApiException(HttpStatus.CONFLICT, ErrorCode.ITEM_NOT_TRADABLE, "商品暂不可交易");
                     }
                     if (!"HARVEST".equals(item.itemType)) {
-                        throw new ApiException(HttpStatus.CONFLICT, "私下交易 MVP 仅支持收获物交易");
+                        throw new ApiException(HttpStatus.CONFLICT, ErrorCode.ITEM_NOT_TRADABLE, "私下交易 MVP 仅支持收获物交易");
                     }
                     return item;
                 },
@@ -179,7 +180,7 @@ public class PrivateTradeService {
     private int privateTaxRate() {
         Integer rate = jdbcTemplate.queryForObject("select rate_basis_points from tax_config where trade_type = 'PRIVATE'", Integer.class);
         if (rate == null) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "私下交易税率配置缺失");
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.CONFIG_MISSING, "私下交易税率配置缺失");
         }
         return rate;
     }
@@ -198,7 +199,7 @@ public class PrivateTradeService {
                 quantity
         );
         if (updated != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "卖方库存不足");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.INSUFFICIENT_INVENTORY, "卖方库存不足");
         }
     }
 
@@ -212,7 +213,7 @@ public class PrivateTradeService {
                 quantity
         );
         if (updated != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "释放冻结库存失败");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "释放冻结库存失败");
         }
     }
 
@@ -225,7 +226,7 @@ public class PrivateTradeService {
                 quantity
         );
         if (updated != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "扣减冻结库存失败");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "扣减冻结库存失败");
         }
     }
 
@@ -247,7 +248,7 @@ public class PrivateTradeService {
                         "from private_trade_offers p join items i on i.id = p.item_id where p.id = ? for update",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "报价单不存在");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "报价单不存在");
                     }
                     return new OfferSnapshot(
                             UUID.fromString(rs.getString("id")),
@@ -274,7 +275,7 @@ public class PrivateTradeService {
                 "select balance, version from wallets where user_id = ? for update",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "钱包不存在");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.WALLET_NOT_FOUND, "钱包不存在");
                     }
                     return new WalletSnapshot(rs.getLong("balance"), rs.getInt("version"));
                 },
@@ -290,7 +291,7 @@ public class PrivateTradeService {
                 version
         );
         if (updated != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "钱包状态已变化，请重试");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "钱包状态已变化，请重试");
         }
     }
 

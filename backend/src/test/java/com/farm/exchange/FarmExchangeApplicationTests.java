@@ -177,7 +177,7 @@ class FarmExchangeApplicationTests {
         mockMvc.perform(get("/api/me/summary"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"))
+                .andExpect(jsonPath("$.code").value("AUTH_REQUIRED"))
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.message").value("请先登录"))
                 .andExpect(jsonPath("$.path").value("/api/me/summary"));
@@ -327,6 +327,7 @@ class FarmExchangeApplicationTests {
                         .contentType("application/json")
                         .content("{\"itemCode\":\"WHEAT_SEED\",\"quantity\":3,\"tradePassword\":\"654321\"}"))
                 .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("TRADE_PASSWORD_REQUIRED"))
                 .andExpect(jsonPath("$.message").value("请先设置交易密码"));
 
         mockMvc.perform(post("/api/users/" + userId + "/trade-password")
@@ -338,12 +339,14 @@ class FarmExchangeApplicationTests {
                         .contentType("application/json")
                         .content("{\"itemCode\":\"WHEAT_SEED\",\"quantity\":3,\"tradePassword\":\"000000\"}"))
                 .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("TRADE_PASSWORD_INVALID"))
                 .andExpect(jsonPath("$.message").value("交易密码错误"));
 
         mockMvc.perform(post("/api/users/" + userId + "/shop/purchase")
                         .contentType("application/json")
                         .content("{\"itemCode\":\"WHEAT\",\"quantity\":1,\"tradePassword\":\"654321\"}"))
                 .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ITEM_NOT_TRADABLE"))
                 .andExpect(jsonPath("$.message").value("该商品不能在商店购买"));
 
         mockMvc.perform(post("/api/users/" + userId + "/shop/purchase")
@@ -481,6 +484,7 @@ class FarmExchangeApplicationTests {
                         .contentType("application/json")
                         .content("{\"itemCode\":\"WHEAT\",\"quantity\":5000,\"tradePassword\":\"654321\"}"))
                 .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("BULK_TOKEN_REQUIRED"))
                 .andExpect(jsonPath("$.message").value("大宗交易需要提供有效令牌"));
 
         MvcResult tokenResult = mockMvc.perform(post("/api/users/" + userId + "/bulk-tokens")
@@ -638,6 +642,7 @@ class FarmExchangeApplicationTests {
                         .contentType("application/json")
                         .content("{\"tradePassword\":\"654321\"}"))
                 .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("BULK_TOKEN_REQUIRED"))
                 .andExpect(jsonPath("$.message").value("大宗交易需要提供有效令牌"));
 
         MvcResult tokenResult = mockMvc.perform(post("/api/users/" + buyerId + "/bulk-tokens")
@@ -686,6 +691,7 @@ class FarmExchangeApplicationTests {
         mockMvc.perform(get("/api/admin/tax-configs")
                         .header("Authorization", "Bearer " + playerToken))
                 .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("PERMISSION_DENIED"))
                 .andExpect(jsonPath("$.message").value("需要管理员权限"));
 
         mockMvc.perform(get("/api/admin/tax-configs")

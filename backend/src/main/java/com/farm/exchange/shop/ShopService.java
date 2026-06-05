@@ -1,6 +1,7 @@
 package com.farm.exchange.shop;
 
 import com.farm.exchange.common.ApiException;
+import com.farm.exchange.common.ErrorCode;
 import com.farm.exchange.user.TradePasswordService;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -28,7 +29,7 @@ public class ShopService {
         long totalAmount = Math.multiplyExact(item.currentPrice, request.getQuantity());
         WalletSnapshot wallet = lockedWallet(userId);
         if (wallet.balance < totalAmount) {
-            throw new ApiException(HttpStatus.CONFLICT, "金币不足，无法购买");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.INSUFFICIENT_BALANCE, "金币不足，无法购买");
         }
 
         long balanceAfter = wallet.balance - totalAmount;
@@ -39,7 +40,7 @@ public class ShopService {
                 wallet.version
         );
         if (walletUpdated != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "钱包状态已变化，请重试");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "钱包状态已变化，请重试");
         }
 
         long availableAfter = addInventory(userId, item.id, request.getQuantity());
@@ -67,7 +68,7 @@ public class ShopService {
                 "select id, code, item_type, current_price, trade_enabled from items where code = ? and status = 'ACTIVE'",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "商品不存在或不可用");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.ITEM_NOT_FOUND, "商品不存在或不可用");
                     }
                     return new ShopItem(
                             UUID.fromString(rs.getString("id")),
@@ -83,10 +84,10 @@ public class ShopService {
 
     private void validatePurchasable(ShopItem item) {
         if (!item.tradeEnabled) {
-            throw new ApiException(HttpStatus.CONFLICT, "商品暂不可购买");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.ITEM_NOT_TRADABLE, "商品暂不可购买");
         }
         if (!"SEED".equals(item.itemType) && !"ANIMAL".equals(item.itemType)) {
-            throw new ApiException(HttpStatus.CONFLICT, "该商品不能在商店购买");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.ITEM_NOT_TRADABLE, "该商品不能在商店购买");
         }
     }
 
@@ -95,7 +96,7 @@ public class ShopService {
                 "select balance, version from wallets where user_id = ? for update",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "钱包不存在");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.WALLET_NOT_FOUND, "钱包不存在");
                     }
                     return new WalletSnapshot(rs.getLong("balance"), rs.getInt("version"));
                 },
@@ -146,4 +147,3 @@ public class ShopService {
         }
     }
 }
-

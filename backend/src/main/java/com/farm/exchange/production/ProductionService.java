@@ -1,6 +1,7 @@
 package com.farm.exchange.production;
 
 import com.farm.exchange.common.ApiException;
+import com.farm.exchange.common.ErrorCode;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -111,11 +112,11 @@ public class ProductionService {
         ensureActiveUser(userId);
         GrowthSnapshot growth = lockGrowth(userId, growthId);
         if (!"GROWING".equals(growth.status) && !"READY".equals(growth.status)) {
-            throw new ApiException(HttpStatus.CONFLICT, "该生产批次不可收获");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "该生产批次不可收获");
         }
         OffsetDateTime now = OffsetDateTime.now();
         if (now.isBefore(growth.readyAt)) {
-            throw new ApiException(HttpStatus.CONFLICT, "尚未成熟，不能收获");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "尚未成熟，不能收获");
         }
 
         jdbcTemplate.update(
@@ -143,7 +144,7 @@ public class ProductionService {
                 userId
         );
         if (exists == null || exists == 0) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "用户不存在或状态不可用");
+            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在或状态不可用");
         }
     }
 
@@ -154,12 +155,12 @@ public class ProductionService {
                         "where i.code = ? and i.status = 'ACTIVE'",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "生产商品不存在或不可用");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.ITEM_NOT_FOUND, "生产商品不存在或不可用");
                     }
                     Integer growSeconds = nullableInteger(rs.getObject("grow_seconds"));
                     Long outputQuantity = nullableLong(rs.getObject("output_quantity"));
                     if (growSeconds == null || growSeconds <= 0 || outputQuantity == null || outputQuantity <= 0) {
-                        throw new ApiException(HttpStatus.CONFLICT, "商品生产配置不完整");
+                        throw new ApiException(HttpStatus.CONFLICT, ErrorCode.CONFIG_MISSING, "商品生产配置不完整");
                     }
                     return new ItemPlan(
                             UUID.fromString(rs.getString("id")),
@@ -177,10 +178,10 @@ public class ProductionService {
 
     private void validateInputType(String slotType, String itemType) {
         if ("FARM".equals(slotType) && !"SEED".equals(itemType)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "农场只能种植种子");
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "农场只能种植种子");
         }
         if ("RANCH".equals(slotType) && !"ANIMAL".equals(itemType)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "牧场只能养殖动物");
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "牧场只能养殖动物");
         }
     }
 
@@ -193,10 +194,10 @@ public class ProductionService {
                 userId
         );
         if (status == null) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "栏位不存在");
+            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "栏位不存在");
         }
         if (!"EMPTY".equals(status)) {
-            throw new ApiException(HttpStatus.CONFLICT, "栏位不是空闲状态");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "栏位不是空闲状态");
         }
     }
 
@@ -208,7 +209,7 @@ public class ProductionService {
                 item.id
         );
         if (updated != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "库存不足，无法开始生产");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.INSUFFICIENT_INVENTORY, "库存不足，无法开始生产");
         }
     }
 
@@ -245,7 +246,7 @@ public class ProductionService {
                         "where g.id = ? and g.user_id = ? for update",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "生产批次不存在");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.RESOURCE_NOT_FOUND, "生产批次不存在");
                     }
                     return new GrowthSnapshot(
                             rs.getString("slot_type"),
@@ -310,4 +311,3 @@ public class ProductionService {
         }
     }
 }
-

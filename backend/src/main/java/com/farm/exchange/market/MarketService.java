@@ -3,6 +3,7 @@ package com.farm.exchange.market;
 import com.farm.exchange.bulk.BulkTokenService;
 import com.farm.exchange.bulk.BulkTradeItem;
 import com.farm.exchange.common.ApiException;
+import com.farm.exchange.common.ErrorCode;
 import com.farm.exchange.user.TradePasswordService;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -39,7 +40,7 @@ public class MarketService {
         if ("BUY".equals(side)) {
             long totalCost = grossAmount + taxAmount;
             if (wallet.balance < totalCost) {
-                throw new ApiException(HttpStatus.CONFLICT, "金币不足，无法买入");
+                throw new ApiException(HttpStatus.CONFLICT, ErrorCode.INSUFFICIENT_BALANCE, "金币不足，无法买入");
             }
             balanceAfter = wallet.balance - totalCost;
             netAmount = totalCost;
@@ -88,7 +89,7 @@ public class MarketService {
                 "select id, code, name, base_price, current_price from items where code = ? and item_type = 'HARVEST' and status = 'ACTIVE'",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "行情商品不存在或不可用");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.ITEM_NOT_FOUND, "行情商品不存在或不可用");
                     }
                     UUID itemId = UUID.fromString(rs.getString("id"));
                     long basePrice = rs.getLong("base_price");
@@ -124,7 +125,7 @@ public class MarketService {
                 "select id, code, item_type, base_price, current_price, bulk_quantity_threshold, bulk_amount_threshold, trade_enabled from items where code = ? and status = 'ACTIVE'",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "交易商品不存在或不可用");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.ITEM_NOT_FOUND, "交易商品不存在或不可用");
                     }
                     MarketItem item = new MarketItem(
                             UUID.fromString(rs.getString("id")),
@@ -137,10 +138,10 @@ public class MarketService {
                             rs.getBoolean("trade_enabled")
                     );
                     if (!item.tradeEnabled) {
-                        throw new ApiException(HttpStatus.CONFLICT, "商品暂不可交易");
+                        throw new ApiException(HttpStatus.CONFLICT, ErrorCode.ITEM_NOT_TRADABLE, "商品暂不可交易");
                     }
                     if (!"HARVEST".equals(item.itemType)) {
-                        throw new ApiException(HttpStatus.CONFLICT, "交易站 MVP 仅支持收获物交易");
+                        throw new ApiException(HttpStatus.CONFLICT, ErrorCode.ITEM_NOT_TRADABLE, "交易站 MVP 仅支持收获物交易");
                     }
                     return item;
                 },
@@ -154,7 +155,7 @@ public class MarketService {
                 Integer.class
         );
         if (rate == null) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "交易站税率配置缺失");
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.CONFIG_MISSING, "交易站税率配置缺失");
         }
         return rate;
     }
@@ -164,7 +165,7 @@ public class MarketService {
                 "select balance, version from wallets where user_id = ? for update",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "钱包不存在");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.WALLET_NOT_FOUND, "钱包不存在");
                     }
                     return new WalletSnapshot(rs.getLong("balance"), rs.getInt("version"));
                 },
@@ -180,7 +181,7 @@ public class MarketService {
                 version
         );
         if (updated != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "钱包状态已变化，请重试");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "钱包状态已变化，请重试");
         }
     }
 
@@ -204,7 +205,7 @@ public class MarketService {
                 quantity
         );
         if (updated != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "库存不足，无法卖出");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.INSUFFICIENT_INVENTORY, "库存不足，无法卖出");
         }
         return inventoryQuantity(userId, itemId);
     }

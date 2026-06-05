@@ -3,6 +3,7 @@ package com.farm.exchange.user;
 import com.farm.exchange.auth.AuthPrincipal;
 import com.farm.exchange.auth.AuthTokenService;
 import com.farm.exchange.common.ApiException;
+import com.farm.exchange.common.ErrorCode;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -39,7 +40,7 @@ public class UserService {
                     userId, request.getUsername(), request.getNickname(), passwordHash
             );
         } catch (DuplicateKeyException exception) {
-            throw new ApiException(HttpStatus.CONFLICT, "用户名已存在");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.USERNAME_EXISTS, "用户名已存在");
         }
 
         jdbcTemplate.update(
@@ -65,7 +66,7 @@ public class UserService {
                 "select id, username, nickname, password_hash, role, status from app_users where username = ?",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.UNAUTHORIZED, "用户名或密码错误");
+                        throw new ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_FAILED, "用户名或密码错误");
                     }
                     return new LoginUser(
                             UUID.fromString(rs.getString("id")),
@@ -79,10 +80,10 @@ public class UserService {
                 request.getUsername()
         );
         if (!"ACTIVE".equals(user.status)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "用户状态不可用");
+            throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.USER_INACTIVE, "用户状态不可用");
         }
         if (!passwordEncoder.matches(request.getPassword(), user.passwordHash)) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "用户名或密码错误");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, ErrorCode.AUTH_FAILED, "用户名或密码错误");
         }
         String token = authTokenService.issue(new AuthPrincipal(user.userId, user.username, user.role));
         return new LoginResponse(user.userId, user.username, user.nickname, user.role, "Bearer", token);
@@ -93,7 +94,7 @@ public class UserService {
                 "select id, username, nickname, role, status from app_users where id = ?",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, "用户不存在");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在");
                     }
                     return new CurrentUserResponse(
                             UUID.fromString(rs.getString("id")),
@@ -115,7 +116,7 @@ public class UserService {
                 userId
         );
         if (exists == null || exists == 0) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "用户不存在或状态不可用");
+            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在或状态不可用");
         }
 
         String tradePasswordHash = passwordEncoder.encode(request.getTradePassword());
@@ -126,7 +127,7 @@ public class UserService {
                 userId
         );
         if (updated != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "交易密码设置失败，请重试");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "交易密码设置失败，请重试");
         }
 
         return new TradePasswordResponse(userId, true);
@@ -139,7 +140,7 @@ public class UserService {
                 slotType
         );
         if (slots == null || slots <= 0) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "扩建配置缺失：" + slotType);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.CONFIG_MISSING, "扩建配置缺失：" + slotType);
         }
         return slots;
     }

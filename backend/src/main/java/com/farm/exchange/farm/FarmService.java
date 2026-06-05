@@ -1,6 +1,7 @@
 package com.farm.exchange.farm;
 
 import com.farm.exchange.common.ApiException;
+import com.farm.exchange.common.ErrorCode;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -56,13 +57,13 @@ public class FarmService {
         ExpansionConfig config = expansionConfig(slotType);
         int currentSlots = countSlots(userId, slotType);
         if (currentSlots >= config.getMaxSlots()) {
-            throw new ApiException(HttpStatus.CONFLICT, "栏位已达到最大数量");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "栏位已达到最大数量");
         }
 
         long cost = calculateExpandCost(config, currentSlots);
         WalletSnapshot wallet = lockedWallet(userId);
         if (wallet.balance < cost) {
-            throw new ApiException(HttpStatus.CONFLICT, "金币不足，无法扩建");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.INSUFFICIENT_BALANCE, "金币不足，无法扩建");
         }
 
         long balanceAfter = wallet.balance - cost;
@@ -73,7 +74,7 @@ public class FarmService {
                 wallet.version
         );
         if (walletUpdated != 1) {
-            throw new ApiException(HttpStatus.CONFLICT, "钱包状态已变化，请重试");
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.STATE_CONFLICT, "钱包状态已变化，请重试");
         }
 
         int nextSlotIndex = currentSlots + 1;
@@ -137,7 +138,7 @@ public class FarmService {
                 userId
         );
         if (exists == null || exists == 0) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "用户不存在或状态不可用");
+            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在或状态不可用");
         }
     }
 
@@ -217,4 +218,3 @@ public class FarmService {
         }
     }
 }
-
