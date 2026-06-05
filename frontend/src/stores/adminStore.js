@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { ApiClientError, createApiError, normalizeError } from '../apiError'
 
 async function requestJson(url, options = {}) {
   const response = await fetch(url, {
@@ -10,7 +11,7 @@ async function requestJson(url, options = {}) {
   })
   const body = await response.json().catch(() => null)
   if (!response.ok) {
-    throw new Error(body?.message || `请求失败：${response.status}`)
+    throw createApiError(body, response)
   }
   return body
 }
@@ -28,7 +29,8 @@ export const useAdminStore = defineStore('admin', {
     issuedToken: null,
     loading: false,
     message: '',
-    error: ''
+    error: '',
+    errorDetail: null
   }),
   getters: {
     isLoggedIn(state) {
@@ -54,20 +56,38 @@ export const useAdminStore = defineStore('admin', {
     setMessage(message) {
       this.message = message
       this.error = ''
+      this.errorDetail = null
     },
     setError(error) {
-      this.error = error instanceof Error ? error.message : String(error)
+      const normalized = normalizeError(error)
+      this.error = normalized.message
+      this.errorDetail = {
+        code: normalized.code,
+        status: normalized.status,
+        path: normalized.path,
+        action: normalized.action,
+        fieldErrors: normalized.fieldErrors
+      }
       this.message = ''
+    },
+    clearSession() {
+      this.currentUser = null
+      this.accessToken = ''
+      localStorage.removeItem('farm_admin_token')
     },
     async run(task, successMessage) {
       this.loading = true
       this.error = ''
+      this.errorDetail = null
       try {
         const result = await task()
         if (successMessage) this.setMessage(successMessage)
         return result
       } catch (error) {
         this.setError(error)
+        if (error instanceof ApiClientError && ['AUTH_REQUIRED', 'AUTH_INVALID', 'AUTH_EXPIRED'].includes(error.code)) {
+          this.clearSession()
+        }
         throw error
       } finally {
         this.loading = false

@@ -19,7 +19,9 @@
             登录密码
             <input v-model="admin.password" type="password" placeholder="请输入登录密码" @keydown.enter="admin.login" />
           </label>
-          <button class="button ghost" type="button" @click="admin.login">登录管理台</button>
+          <button class="button ghost" type="button" :disabled="admin.loading" @click="admin.login">
+            {{ admin.loading ? '处理中...' : '登录管理台' }}
+          </button>
         </template>
 
         <template v-else>
@@ -31,7 +33,9 @@
             目标玩家用户 ID
             <input v-model.trim="admin.targetUserId" placeholder="要查询或发令牌的玩家 UUID" />
           </label>
-          <button class="button ghost" type="button" @click="loadEverything">刷新控制台</button>
+          <button class="button ghost" type="button" :disabled="admin.loading" @click="loadEverything">
+            {{ admin.loading ? '刷新中...' : '刷新控制台' }}
+          </button>
           <button class="button subtle" type="button" @click="admin.logout">退出登录</button>
         </template>
       </div>
@@ -59,7 +63,21 @@
       </header>
 
       <div v-if="admin.message" class="notice success">{{ admin.message }}</div>
-      <div v-if="admin.error" class="notice error">{{ admin.error }}</div>
+      <div v-if="admin.error" class="notice error">
+        <div class="notice-title">
+          <span>{{ admin.error }}</span>
+          <code v-if="admin.errorDetail?.code">{{ admin.errorDetail.code }}</code>
+        </div>
+        <p v-if="admin.errorDetail?.action">{{ admin.errorDetail.action }}</p>
+        <p v-if="admin.errorDetail?.status || admin.errorDetail?.path" class="notice-meta">
+          HTTP {{ admin.errorDetail.status || '-' }} · {{ admin.errorDetail.path || '本地校验' }}
+        </p>
+        <ul v-if="admin.errorDetail?.fieldErrors?.length" class="field-errors">
+          <li v-for="fieldError in admin.errorDetail.fieldErrors" :key="`${fieldError.field}-${fieldError.message}`">
+            {{ fieldError.field }}：{{ fieldError.message }}
+          </li>
+        </ul>
+      </div>
 
       <section id="tax" class="panel tax-panel">
         <div class="panel-heading">
@@ -67,7 +85,7 @@
             <span class="section-kicker">Tax Config</span>
             <h3>税率配置</h3>
           </div>
-          <button class="button ghost" type="button" @click="admin.loadTaxConfigs">读取税率</button>
+          <button class="button ghost" type="button" :disabled="admin.loading" @click="admin.loadTaxConfigs">读取税率</button>
         </div>
 
         <div class="tax-grid">
@@ -84,7 +102,7 @@
               调整原因
               <input v-model.trim="taxForm[type.code].reason" placeholder="例如：活动期降低交易站税率" />
             </label>
-            <button class="button" type="button" @click="saveTax(type.code)">保存 {{ type.name }}</button>
+            <button class="button" type="button" :disabled="admin.loading" @click="saveTax(type.code)">保存 {{ type.name }}</button>
           </article>
         </div>
       </section>
@@ -118,7 +136,7 @@
               有效小时
               <input v-model.number="tokenForm.expireHours" type="number" min="1" />
             </label>
-            <button class="button wide" type="submit">发放令牌</button>
+            <button class="button wide" type="submit" :disabled="admin.loading">发放令牌</button>
           </form>
         </div>
 
@@ -136,7 +154,7 @@
             <span class="section-kicker">Player Assets</span>
             <h3>玩家资产</h3>
           </div>
-          <button class="button ghost" type="button" @click="admin.loadAssets">读取资产</button>
+          <button class="button ghost" type="button" :disabled="admin.loading" @click="admin.loadAssets">读取资产</button>
         </div>
 
         <div class="asset-summary">
@@ -177,7 +195,7 @@
             <span class="section-kicker">Trade Records</span>
             <h3>交易记录</h3>
           </div>
-          <button class="button ghost" type="button" @click="admin.loadTrades">读取交易</button>
+          <button class="button ghost" type="button" :disabled="admin.loading" @click="admin.loadTrades">读取交易</button>
         </div>
 
         <div ref="chartEl" class="chart"></div>

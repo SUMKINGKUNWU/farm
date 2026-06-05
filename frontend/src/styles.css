@@ -257,6 +257,42 @@ select {
   font-weight: 900;
 }
 
+.notice p {
+  margin: 8px 0 0;
+  font-weight: 700;
+  line-height: 1.65;
+}
+
+.notice-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notice-title code {
+  flex: none;
+  padding: 5px 8px;
+  color: inherit;
+  border-radius: 999px;
+  background: rgba(255, 248, 232, .48);
+  font-family: "Microsoft YaHei", "Noto Serif SC", "Songti SC", serif;
+  font-size: 12px;
+}
+
+.notice-meta {
+  color: rgba(110, 38, 26, .72);
+  font-size: 12px;
+}
+
+.field-errors {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-weight: 700;
+}
+
 .notice.success {
   color: #264c2d;
   background: rgba(82, 116, 73, .16);
@@ -364,6 +400,12 @@ h3 {
   cursor: pointer;
   background: linear-gradient(135deg, var(--moss), var(--soil));
   box-shadow: 0 12px 25px rgba(49, 75, 47, .23);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+  transform: none;
 }
 
 .button.ghost {
