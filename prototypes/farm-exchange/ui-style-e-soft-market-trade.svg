@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="960" viewBox="0 0 1440 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2f2f0"/>
+      <stop offset="1" stop-color="#d9d9d6"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.7" stop-color="#f4f6ee"/>
+      <stop offset="1" stop-color="#e4ead8"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#caff6b"/>
+      <stop offset="1" stop-color="#35c77a"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe29a"/>
+      <stop offset="1" stop-color="#f0a72a"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="28" stdDeviation="30" flood-color="#777" flood-opacity="0.28"/>
+    </filter>
+    <filter id="lift" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="-2" stdDeviation="2" flood-color="#ffffff" flood-opacity="0.9"/>
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#8b8b8b" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="1440" height="960" fill="url(#bg)"/>
+  <g transform="translate(168 76)">
+    <rect width="1104" height="812" rx="82" fill="url(#panel)" filter="url(#shadow)"/>
+    <rect x="2" y="2" width="1100" height="808" rx="80" fill="none" stroke="#ffffff" stroke-width="4"/>
+
+    <text x="92" y="112" font-size="28" font-weight="800" fill="#9a9a96">Market Station</text>
+    <text x="92" y="176" font-size="62" font-weight="900" fill="#111">WHEAT 25</text>
+    <rect x="362" y="126" width="122" height="48" rx="24" fill="#9ff071"/>
+    <text x="391" y="158" font-size="24" font-weight="900" fill="#123d12">+14%</text>
+    <circle cx="890" cy="128" r="58" fill="#ffffff" filter="url(#lift)"/>
+    <text x="890" y="148" text-anchor="middle" font-size="52">🔎</text>
+    <circle cx="1008" cy="128" r="58" fill="#ffffff" filter="url(#lift)"/>
+    <text x="1008" y="148" text-anchor="middle" font-size="52">👩‍🌾</text>
+
+    <g transform="translate(92 224)">
+      <path d="M0 180 C74 174 98 210 148 154 C205 90 250 72 318 118 C382 162 420 144 472 94 C540 30 602 86 646 44 C704 -12 752 28 812 0" fill="none" stroke="#111" stroke-width="8" stroke-linecap="round"/>
+      <path d="M0 190 C74 184 98 220 148 164 C205 100 250 82 318 128 C382 172 420 154 472 104 C540 40 602 96 646 54 C704 -2 752 38 812 10" fill="none" stroke="#111" stroke-width="28" stroke-opacity="0.06" stroke-linecap="round"/>
+      <line x1="344" y1="30" x2="344" y2="232" stroke="#cfcfcb" stroke-width="3"/>
+      <rect x="304" y="96" width="80" height="50" rx="25" fill="#ffffff" filter="url(#lift)"/>
+      <text x="344" y="132" text-anchor="middle" font-size="36" font-weight="900">-</text>
+      <text x="60" y="276" font-size="26" fill="#b2b2ae">1d</text>
+      <text x="230" y="276" font-size="26" fill="#b2b2ae">1w</text>
+      <rect x="386" y="246" width="106" height="50" rx="18" fill="#eeeeea"/>
+      <text x="421" y="280" font-size="28" font-weight="900" fill="#111">1m</text>
+      <text x="584" y="276" font-size="26" fill="#b2b2ae">6m</text>
+      <text x="760" y="276" font-size="26" fill="#b2b2ae">All</text>
+    </g>
+
+    <g transform="translate(92 526)">
+      <rect width="318" height="122" rx="38" fill="#ffffff" filter="url(#lift)"/>
+      <text x="32" y="48" font-size="24" font-weight="900" fill="#111">Buy</text>
+      <text x="32" y="92" font-size="44" font-weight="900" fill="#111">100</text>
+      <rect x="198" y="42" width="86" height="44" rx="22" fill="url(#green)"/>
+      <text x="220" y="72" font-size="22" font-weight="900" fill="#123d12">3%</text>
+
+      <rect x="348" width="318" height="122" rx="38" fill="#ffffff" filter="url(#lift)"/>
+      <text x="380" y="48" font-size="24" font-weight="900" fill="#111">Sell</text>
+      <text x="380" y="92" font-size="44" font-weight="900" fill="#111">60</text>
+      <rect x="546" y="42" width="86" height="44" rx="22" fill="url(#amber)"/>
+      <text x="568" y="72" font-size="22" font-weight="900" fill="#4a2b08">5%</text>
+
+      <rect x="696" width="226" height="122" rx="38" fill="#111" filter="url(#lift)"/>
+      <text x="728" y="48" font-size="24" font-weight="900" fill="#d9d9d6">Offers</text>
+      <text x="728" y="92" font-size="44" font-weight="900" fill="#ffffff">4</text>
+    </g>
+
+    <g transform="translate(198 692)">
+      <rect width="708" height="118" rx="58" fill="#ffffff" filter="url(#lift)"/>
+      <g transform="translate(40 18)">
+        <text x="0" y="42" font-size="36">🏠</text>
+        <text x="-6" y="82" font-size="21" font-weight="900" fill="#777">Farm</text>
+      </g>
+      <g transform="translate(184 18)" opacity="0.45">
+        <text x="0" y="42" font-size="36">🌾</text>
+        <text x="-18" y="82" font-size="21" font-weight="900" fill="#777">Fields</text>
+      </g>
+      <rect x="294" y="18" width="150" height="82" rx="41" fill="#8f7bff" filter="url(#shadow)"/>
+      <text x="369" y="70" text-anchor="middle" font-size="48" fill="#ffffff">⇄</text>
+      <g transform="translate(500 18)">
+        <text x="0" y="42" font-size="36">📈</text>
+        <text x="-22" y="82" font-size="21" font-weight="900" fill="#111">Market</text>
+      </g>
+      <g transform="translate(624 18)" opacity="0.45">
+        <text x="0" y="42" font-size="36">🎫</text>
+        <text x="-22" y="82" font-size="21" font-weight="900" fill="#777">Token</text>
+      </g>
+    </g>
+  </g>
+</svg>

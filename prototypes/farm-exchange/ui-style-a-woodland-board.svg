@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="960" viewBox="0 0 1440 960">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#cdeeb7"/>
+      <stop offset="0.45" stop-color="#f7e4a5"/>
+      <stop offset="1" stop-color="#b5d27a"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8a4f25"/>
+      <stop offset="0.48" stop-color="#5b3219"/>
+      <stop offset="1" stop-color="#2f1c11"/>
+    </linearGradient>
+    <linearGradient id="soil" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9b5a2f"/>
+      <stop offset="1" stop-color="#57321d"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#3d2812" flood-opacity="0.25"/>
+    </filter>
+    <pattern id="planks" width="34" height="34" patternUnits="userSpaceOnUse">
+      <path d="M0 6 H34 M0 24 H34" stroke="#ffffff" stroke-opacity="0.08"/>
+      <path d="M12 0 V34" stroke="#000000" stroke-opacity="0.08"/>
+    </pattern>
+  </defs>
+
+  <rect width="1440" height="960" fill="url(#sky)"/>
+  <circle cx="1240" cy="118" r="72" fill="#ffd35a"/>
+  <path d="M0 720 C220 650 360 720 540 666 C760 600 980 710 1440 620 V960 H0Z" fill="#5d8d3d"/>
+  <path d="M0 790 C260 700 500 800 720 730 C960 660 1160 760 1440 700 V960 H0Z" fill="#436d32"/>
+  <path d="M70 690 C130 610 195 610 250 690 Z" fill="#3e6c35"/>
+  <path d="M1080 676 C1150 570 1245 590 1300 676 Z" fill="#35612f"/>
+
+  <rect x="34" y="34" width="1372" height="892" rx="44" fill="#fff5d6" fill-opacity="0.68" stroke="#7a4a22" stroke-width="8" filter="url(#shadow)"/>
+  <rect x="54" y="54" width="1332" height="852" rx="34" fill="url(#planks)" opacity="0.38"/>
+
+  <g transform="translate(78 78)">
+    <rect width="252" height="804" rx="30" fill="url(#wood)" filter="url(#shadow)"/>
+    <circle cx="62" cy="58" r="34" fill="#e7b548"/>
+    <text x="62" y="71" text-anchor="middle" font-size="34" font-weight="900" fill="#321b0c">穗</text>
+    <text x="112" y="50" font-size="18" font-weight="900" fill="#f8e8b6">FARM EXCHANGE</text>
+    <text x="112" y="82" font-size="28" font-weight="900" fill="#fff7d7">农场账本</text>
+    <g transform="translate(22 128)">
+      <rect width="208" height="58" rx="18" fill="#f4d36d"/>
+      <text x="104" y="37" text-anchor="middle" font-size="22" font-weight="900" fill="#3a240f">玩家农场</text>
+      <rect y="74" width="208" height="58" rx="18" fill="#fff2c0" fill-opacity="0.2" stroke="#fff2c0" stroke-opacity="0.28"/>
+      <text x="104" y="111" text-anchor="middle" font-size="20" font-weight="900" fill="#fff2c0">运营管理</text>
+    </g>
+    <g transform="translate(22 304)" font-size="20" font-weight="900" fill="#fff7d7">
+      <rect width="208" height="44" rx="16" fill="#ffffff" fill-opacity="0.12"/><text x="22" y="29">仓库</text>
+      <rect y="58" width="208" height="44" rx="16" fill="#ffffff" fill-opacity="0.12"/><text x="22" y="87">田地</text>
+      <rect y="116" width="208" height="44" rx="16" fill="#ffffff" fill-opacity="0.12"/><text x="22" y="145">交易站</text>
+      <rect y="174" width="208" height="44" rx="16" fill="#ffffff" fill-opacity="0.12"/><text x="22" y="203">私下交易</text>
+    </g>
+    <g transform="translate(22 636)">
+      <rect width="208" height="116" rx="22" fill="#fff2c0" fill-opacity="0.14" stroke="#fff2c0" stroke-opacity="0.2"/>
+      <text x="20" y="36" font-size="16" font-weight="900" fill="#d9b667">今日目标</text>
+      <text x="20" y="72" font-size="25" font-weight="900" fill="#fff7d7">收获 3 批</text>
+    </g>
+  </g>
+
+  <g transform="translate(362 76)">
+    <rect width="996" height="126" rx="32" fill="#3a2616" filter="url(#shadow)"/>
+    <path d="M34 94 C210 32 380 130 560 62 C736 -4 890 78 962 34" fill="none" stroke="#d7a23a" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+    <text x="38" y="50" font-size="18" font-weight="900" fill="#e8c25b">PLAYER BOARD</text>
+    <text x="38" y="92" font-size="42" font-weight="900" fill="#fff4c8">少文字，高反馈的农场经营界面</text>
+    <g transform="translate(660 22)">
+      <rect width="136" height="82" rx="22" fill="#fff0bd"/>
+      <text x="20" y="31" font-size="15" font-weight="900" fill="#6b4b22">金币</text>
+      <text x="20" y="63" font-size="28" font-weight="900" fill="#2b1a0d">10,000</text>
+      <rect x="152" width="136" height="82" rx="22" fill="#d5e78b"/>
+      <text x="172" y="31" font-size="15" font-weight="900" fill="#3c5528">栏位</text>
+      <text x="172" y="63" font-size="28" font-weight="900" fill="#263913">4 / 16</text>
+    </g>
+  </g>
+
+  <g transform="translate(362 230)">
+    <rect width="646" height="426" rx="34" fill="#f8df95" stroke="#77461f" stroke-width="4" filter="url(#shadow)"/>
+    <text x="34" y="50" font-size="28" font-weight="900" fill="#3a240f">农田与牧场</text>
+    <text x="34" y="78" font-size="16" font-weight="900" fill="#775025">点击地块即可种植 / 收获</text>
+    <g transform="translate(34 106)">
+      <g>
+        <rect width="274" height="274" rx="24" fill="#6f4728"/>
+        <g transform="translate(18 18)">
+          <rect width="52" height="52" rx="12" fill="url(#soil)"/><path d="M12 38 Q26 16 42 38" stroke="#9bd25a" stroke-width="6" fill="none"/>
+          <rect x="62" width="52" height="52" rx="12" fill="url(#soil)"/><path d="M73 36 Q87 14 104 36" stroke="#9bd25a" stroke-width="6" fill="none"/>
+          <rect x="124" width="52" height="52" rx="12" fill="#314b2f"/><text x="150" y="34" text-anchor="middle" font-size="12" font-weight="900" fill="#fff4c8">成熟</text>
+          <rect x="186" width="52" height="52" rx="12" fill="#d9bc79" opacity="0.58"/><text x="212" y="34" text-anchor="middle" font-size="14" font-weight="900" fill="#5d3a1f">锁</text>
+          <rect y="62" width="52" height="52" rx="12" fill="url(#soil)"/>
+          <rect x="62" y="62" width="52" height="52" rx="12" fill="url(#soil)"/>
+          <rect x="124" y="62" width="52" height="52" rx="12" fill="#314b2f"/><text x="150" y="96" text-anchor="middle" font-size="12" font-weight="900" fill="#fff4c8">小麦</text>
+          <rect x="186" y="62" width="52" height="52" rx="12" fill="#d9bc79" opacity="0.58"/>
+          <rect y="124" width="52" height="52" rx="12" fill="#d9bc79" opacity="0.58"/>
+          <rect x="62" y="124" width="52" height="52" rx="12" fill="#d9bc79" opacity="0.58"/>
+          <rect x="124" y="124" width="52" height="52" rx="12" fill="#d9bc79" opacity="0.58"/>
+          <rect x="186" y="124" width="52" height="52" rx="12" fill="#d9bc79" opacity="0.58"/>
+          <rect y="186" width="52" height="52" rx="12" fill="#d9bc79" opacity="0.58"/>
+          <rect x="62" y="186" width="52" height="52" rx="12" fill="#d9bc79" opacity="0.58"/>
+          <rect x="124" y="186" width="52" height="52" rx="12" fill="#d9bc79" opacity="0.58"/>
+          <rect x="186" y="186" width="52" height="52" rx="12" fill="#d9bc79" opacity="0.58"/>
+        </g>
+      </g>
+      <g transform="translate(312 0)">
+        <rect width="266" height="274" rx="24" fill="#425f35"/>
+        <circle cx="58" cy="58" r="28" fill="#f4efe1"/><text x="58" y="66" text-anchor="middle" font-size="22">🐔</text>
+        <circle cx="132" cy="58" r="28" fill="#f4efe1"/><text x="132" y="66" text-anchor="middle" font-size="22">🐄</text>
+        <circle cx="206" cy="58" r="28" fill="#e7c67f" opacity="0.55"/>
+        <rect x="30" y="122" width="206" height="110" rx="20" fill="#fff4c8" fill-opacity="0.18"/>
+        <text x="52" y="166" font-size="20" font-weight="900" fill="#fff4c8">牧场批次</text>
+        <text x="52" y="202" font-size="32" font-weight="900" fill="#fff4c8">2</text>
+      </g>
+    </g>
+  </g>
+
+  <g transform="translate(1032 230)">
+    <rect width="326" height="426" rx="34" fill="#fff5d6" stroke="#77461f" stroke-width="4" filter="url(#shadow)"/>
+    <text x="28" y="50" font-size="28" font-weight="900" fill="#3a240f">商店</text>
+    <g transform="translate(26 82)">
+      <rect width="274" height="74" rx="22" fill="#f0c75d"/><text x="28" y="46" font-size="26" font-weight="900" fill="#3a240f">小麦种子</text><text x="214" y="47" font-size="24" font-weight="900" fill="#3a240f">80</text>
+      <rect y="88" width="274" height="74" rx="22" fill="#dfe986"/><text x="28" y="134" font-size="26" font-weight="900" fill="#30441f">鸡苗</text><text x="214" y="135" font-size="24" font-weight="900" fill="#30441f">320</text>
+      <rect y="176" width="274" height="132" rx="26" fill="#3a2616"/>
+      <text x="28" y="222" font-size="22" font-weight="900" fill="#fff4c8">批次提醒</text>
+      <text x="28" y="266" font-size="38" font-weight="900" fill="#f0c75d">3 可收获</text>
+    </g>
+  </g>
+
+  <g transform="translate(362 686)">
+    <rect width="996" height="196" rx="34" fill="#3d2616" filter="url(#shadow)"/>
+    <text x="32" y="50" font-size="28" font-weight="900" fill="#fff4c8">交易集市</text>
+    <g transform="translate(32 78)">
+      <rect width="220" height="82" rx="24" fill="#fff4c8"/><text x="24" y="33" font-size="16" font-weight="900" fill="#6c4b20">WHEAT</text><text x="24" y="64" font-size="28" font-weight="900" fill="#2d1c0e">25 ↑</text>
+      <rect x="238" width="220" height="82" rx="24" fill="#d7e57d"/><text x="262" y="33" font-size="16" font-weight="900" fill="#415323">私下报价</text><text x="262" y="64" font-size="28" font-weight="900" fill="#243513">4 单</text>
+      <rect x="476" width="220" height="82" rx="24" fill="#f1b765"/><text x="500" y="33" font-size="16" font-weight="900" fill="#5a3518">税费</text><text x="500" y="64" font-size="28" font-weight="900" fill="#2d1c0e">3% / 5%</text>
+      <rect x="714" width="220" height="82" rx="24" fill="#8dbb69"/><text x="738" y="33" font-size="16" font-weight="900" fill="#1d3217">令牌</text><text x="738" y="64" font-size="28" font-weight="900" fill="#14240f">2 可用</text>
+    </g>
+  </g>
+</svg>

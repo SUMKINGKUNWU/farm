@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="960" viewBox="0 0 1440 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7c96d"/>
+      <stop offset="0.42" stop-color="#ffe7a9"/>
+      <stop offset="1" stop-color="#81a95e"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff9e5"/>
+      <stop offset="1" stop-color="#f0d392"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="20" stdDeviation="22" flood-color="#4b2c13" flood-opacity="0.2"/>
+    </filter>
+    <pattern id="grain" width="80" height="80" patternUnits="userSpaceOnUse">
+      <path d="M0 20 C22 8 42 32 80 14 M0 60 C26 42 50 72 80 50" fill="none" stroke="#5f3718" stroke-opacity="0.08" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <rect width="1440" height="960" fill="url(#bg)"/>
+  <rect width="1440" height="960" fill="url(#grain)" opacity="0.9"/>
+  <ellipse cx="190" cy="140" rx="160" ry="84" fill="#fff3c8" opacity="0.35"/>
+  <ellipse cx="1250" cy="190" rx="220" ry="120" fill="#4a7d37" opacity="0.2"/>
+  <path d="M0 820 C180 760 310 845 500 792 C760 720 990 828 1440 748 V960 H0Z" fill="#4d7b38"/>
+
+  <g transform="translate(70 54)">
+    <rect width="1300" height="852" rx="42" fill="#fff4ce" fill-opacity="0.7" filter="url(#soft)"/>
+    <rect x="26" y="26" width="1248" height="800" rx="32" fill="#fff8df" fill-opacity="0.55" stroke="#8e5a28" stroke-width="3"/>
+
+    <g transform="translate(54 46)">
+      <rect width="1192" height="90" rx="28" fill="#3b2a1a"/>
+      <text x="34" y="38" font-size="17" font-weight="900" fill="#e8b84f">HARVEST DESK</text>
+      <text x="34" y="70" font-size="34" font-weight="900" fill="#fff7d4">农场经营桌面</text>
+      <g transform="translate(610 16)">
+        <rect width="138" height="58" rx="18" fill="#f5c54e"/><text x="22" y="37" font-size="24" font-weight="900" fill="#2f1b0c">10,000</text>
+        <rect x="154" width="138" height="58" rx="18" fill="#a6ca68"/><text x="176" y="37" font-size="24" font-weight="900" fill="#243414">4/16</text>
+        <rect x="308" width="138" height="58" rx="18" fill="#f3e4b5"/><text x="330" y="37" font-size="24" font-weight="900" fill="#3b2a1a">2 令牌</text>
+        <rect x="462" width="120" height="58" rx="18" fill="#ffffff" fill-opacity="0.16" stroke="#fff3c8" stroke-opacity="0.4"/><text x="490" y="37" font-size="20" font-weight="900" fill="#fff3c8">管理</text>
+      </g>
+    </g>
+
+    <g transform="translate(54 164)">
+      <rect width="300" height="652" rx="34" fill="#3b2a1a" filter="url(#soft)"/>
+      <path d="M26 150 C90 86 150 205 250 120" fill="none" stroke="#e7b84d" stroke-width="5" stroke-linecap="round"/>
+      <text x="28" y="54" font-size="28" font-weight="900" fill="#fff7d4">今日</text>
+      <text x="28" y="94" font-size="44" font-weight="900" fill="#f5c54e">3</text>
+      <text x="86" y="94" font-size="22" font-weight="900" fill="#fff7d4">批可收获</text>
+      <g transform="translate(28 190)">
+        <rect width="244" height="78" rx="24" fill="#fff7d4"/><text x="24" y="48" font-size="25" font-weight="900" fill="#3b2a1a">种植</text><text x="168" y="48" font-size="25" font-weight="900" fill="#7b4a1d">小麦</text>
+        <rect y="96" width="244" height="78" rx="24" fill="#d9e98c"/><text x="24" y="144" font-size="25" font-weight="900" fill="#30451f">养殖</text><text x="168" y="144" font-size="25" font-weight="900" fill="#30451f">鸡苗</text>
+        <rect y="192" width="244" height="78" rx="24" fill="#f3ba69"/><text x="24" y="240" font-size="25" font-weight="900" fill="#3b2a1a">买入</text><text x="168" y="240" font-size="25" font-weight="900" fill="#3b2a1a">WHEAT</text>
+      </g>
+      <g transform="translate(28 530)">
+        <rect width="244" height="82" rx="24" fill="#ffffff" fill-opacity="0.12" stroke="#fff7d4" stroke-opacity="0.24"/>
+        <text x="24" y="34" font-size="16" font-weight="900" fill="#e7b84d">交易密码</text>
+        <text x="24" y="62" font-size="24" font-weight="900" fill="#fff7d4">已设置</text>
+      </g>
+    </g>
+
+    <g transform="translate(384 164)">
+      <rect width="552" height="390" rx="34" fill="url(#card)" filter="url(#soft)"/>
+      <text x="30" y="52" font-size="30" font-weight="900" fill="#3d2613">地块卡片</text>
+      <g transform="translate(30 82)">
+        <rect width="492" height="260" rx="28" fill="#744522"/>
+        <g transform="translate(18 18)">
+          <rect width="102" height="102" rx="22" fill="#a46832"/><text x="51" y="58" text-anchor="middle" font-size="26">🌾</text><text x="51" y="84" text-anchor="middle" font-size="14" font-weight="900" fill="#fff7d4">可收获</text>
+          <rect x="118" width="102" height="102" rx="22" fill="#6a8d3f"/><text x="169" y="58" text-anchor="middle" font-size="26">🌱</text><text x="169" y="84" text-anchor="middle" font-size="14" font-weight="900" fill="#fff7d4">18 分</text>
+          <rect x="236" width="102" height="102" rx="22" fill="#a46832"/><text x="287" y="62" text-anchor="middle" font-size="20" font-weight="900" fill="#fff7d4">空闲</text>
+          <rect x="354" width="102" height="102" rx="22" fill="#d6bd82" opacity="0.5"/><text x="405" y="62" text-anchor="middle" font-size="20" font-weight="900" fill="#76501f">锁</text>
+          <rect y="118" width="102" height="102" rx="22" fill="#a46832"/><text x="51" y="176" text-anchor="middle" font-size="26">🌽</text>
+          <rect x="118" y="118" width="102" height="102" rx="22" fill="#d6bd82" opacity="0.5"/>
+          <rect x="236" y="118" width="102" height="102" rx="22" fill="#d6bd82" opacity="0.5"/>
+          <rect x="354" y="118" width="102" height="102" rx="22" fill="#d6bd82" opacity="0.5"/>
+        </g>
+      </g>
+    </g>
+
+    <g transform="translate(966 164)">
+      <rect width="280" height="390" rx="34" fill="#fff7d4" filter="url(#soft)"/>
+      <text x="28" y="52" font-size="30" font-weight="900" fill="#3d2613">仓库</text>
+      <g transform="translate(28 88)">
+        <rect width="224" height="56" rx="18" fill="#f1c756"/><text x="18" y="36" font-size="22" font-weight="900" fill="#3d2613">小麦</text><text x="176" y="36" font-size="22" font-weight="900" fill="#3d2613">60</text>
+        <rect y="72" width="224" height="56" rx="18" fill="#dbe986"/><text x="18" y="108" font-size="22" font-weight="900" fill="#30451f">鸡蛋</text><text x="176" y="108" font-size="22" font-weight="900" fill="#30451f">20</text>
+        <rect y="144" width="224" height="56" rx="18" fill="#f0d392"/><text x="18" y="180" font-size="22" font-weight="900" fill="#3d2613">锁定</text><text x="176" y="180" font-size="22" font-weight="900" fill="#3d2613">10</text>
+      </g>
+    </g>
+
+    <g transform="translate(384 584)">
+      <rect width="862" height="232" rx="34" fill="#fff7d4" filter="url(#soft)"/>
+      <text x="30" y="52" font-size="30" font-weight="900" fill="#3d2613">交易与报价</text>
+      <g transform="translate(30 84)">
+        <rect width="246" height="104" rx="26" fill="#3b2a1a"/><text x="24" y="38" font-size="16" font-weight="900" fill="#e8b84f">交易站</text><text x="24" y="74" font-size="34" font-weight="900" fill="#fff7d4">WHEAT 25</text>
+        <rect x="270" width="246" height="104" rx="26" fill="#6f8e41"/><text x="294" y="38" font-size="16" font-weight="900" fill="#e8f5b6">私下交易</text><text x="294" y="74" font-size="34" font-weight="900" fill="#fff7d4">2 待处理</text>
+        <rect x="540" width="246" height="104" rx="26" fill="#b46b2b"/><text x="564" y="38" font-size="16" font-weight="900" fill="#ffe7a9">税收</text><text x="564" y="74" font-size="34" font-weight="900" fill="#fff7d4">3% / 5%</text>
+      </g>
+    </g>
+  </g>
+</svg>
