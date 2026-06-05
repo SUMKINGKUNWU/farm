@@ -730,10 +730,542 @@ td small {
   background-size: 100% 20%, 12.5% 100%;
 }
 
+.game-page {
+  position: relative;
+}
+
+.game-shell {
+  position: relative;
+  min-height: calc(100vh - 82px);
+  padding: 24px 24px 104px;
+  border: 1px solid rgba(255, 248, 232, .58);
+  border-radius: 34px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(219, 169, 74, .28), transparent 28%),
+    radial-gradient(circle at 92% 8%, rgba(82, 116, 73, .24), transparent 30%),
+    linear-gradient(145deg, rgba(255, 248, 232, .88), rgba(220, 235, 199, .86));
+  box-shadow: 0 28px 80px rgba(47, 60, 36, .18);
+}
+
+.game-shell::before,
+.game-shell::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: 999px;
+}
+
+.game-shell::before {
+  left: -90px;
+  bottom: -120px;
+  width: 420px;
+  height: 260px;
+  background: rgba(82, 116, 73, .15);
+}
+
+.game-shell::after {
+  right: -120px;
+  top: 210px;
+  width: 360px;
+  height: 360px;
+  background: rgba(219, 169, 74, .14);
+}
+
+.game-topbar,
+.game-layout,
+.game-bottom-tabs {
+  position: relative;
+  z-index: 1;
+}
+
+.game-topbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 170px 140px auto;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.avatar-button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 12px 15px;
+  color: var(--ink);
+  text-align: left;
+  border: 1px solid rgba(36, 26, 16, .1);
+  border-radius: 24px;
+  background: rgba(255, 248, 232, .72);
+  box-shadow: 0 14px 32px rgba(76, 93, 58, .12);
+  cursor: pointer;
+}
+
+.avatar-seed {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  color: #24351d;
+  font-size: 24px;
+  font-weight: 900;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #dce8ca, #f7e1a5);
+}
+
+.avatar-button b,
+.avatar-button small,
+.wallet-strip span,
+.wallet-strip strong {
+  display: block;
+}
+
+.avatar-button b {
+  font-size: 19px;
+}
+
+.avatar-button small,
+.wallet-strip span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wallet-strip {
+  padding: 14px 16px;
+  border: 1px solid rgba(36, 26, 16, .1);
+  border-radius: 22px;
+  background: rgba(255, 248, 232, .78);
+}
+
+.wallet-strip strong {
+  margin-top: 4px;
+  font-size: 22px;
+}
+
+.muted-strip {
+  background: rgba(231, 239, 210, .76);
+}
+
+.round-action {
+  min-height: 58px;
+  padding: 0 20px;
+  color: var(--paper-strong);
+  border: 0;
+  border-radius: 22px;
+  font-weight: 900;
+  cursor: pointer;
+  background: linear-gradient(145deg, var(--moss), var(--soil));
+  box-shadow: 0 14px 30px rgba(49, 75, 47, .22);
+}
+
+.game-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 350px;
+  gap: 18px;
+  align-items: start;
+}
+
+.farm-canvas,
+.market-side,
+.market-board,
+.market-trade-card,
+.inventory-cloud,
+.game-card-form,
+.offer-stack {
+  border: 1px solid rgba(36, 26, 16, .12);
+  box-shadow: 0 18px 42px rgba(76, 93, 58, .12);
+}
+
+.farm-canvas {
+  min-height: 590px;
+  padding: 24px;
+  border-radius: 34px;
+  background:
+    linear-gradient(145deg, rgba(255, 248, 232, .9), rgba(235, 226, 191, .72)),
+    radial-gradient(circle at bottom left, rgba(82, 116, 73, .16), transparent 40%);
+}
+
+.canvas-heading,
+.expand-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.canvas-heading {
+  margin-bottom: 18px;
+}
+
+.canvas-heading h2 {
+  margin: 6px 0 0;
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+
+.game-toolbar {
+  grid-template-columns: repeat(2, minmax(220px, 1fr)) 130px;
+}
+
+.subtle-light {
+  color: var(--ink);
+  background: rgba(255, 248, 232, .82);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+.game-field-board {
+  display: grid;
+  gap: 18px;
+}
+
+.game-zone {
+  padding: 18px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 8% 12%, rgba(219, 169, 74, .2), transparent 36%),
+    rgba(255, 248, 232, .54);
+  border: 1px solid rgba(36, 26, 16, .1);
+}
+
+.ranch-game-zone {
+  background:
+    radial-gradient(circle at 92% 8%, rgba(82, 116, 73, .22), transparent 36%),
+    rgba(255, 248, 232, .54);
+}
+
+.game-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.game-slot {
+  min-height: 92px;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  padding: 13px;
+  color: var(--ink);
+  text-align: left;
+  border: 1px solid rgba(91, 57, 38, .22);
+  border-radius: 22px;
+  cursor: pointer;
+  background:
+    linear-gradient(145deg, rgba(219, 169, 74, .32), rgba(255, 248, 232, .8)),
+    repeating-linear-gradient(45deg, rgba(91, 57, 38, .13) 0 3px, transparent 3px 11px);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.game-slot:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 28px rgba(76, 93, 58, .16);
+}
+
+.game-slot span,
+.game-slot small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.game-slot strong {
+  font-size: 17px;
+}
+
+.game-slot.busy {
+  color: var(--paper-strong);
+  background:
+    linear-gradient(145deg, rgba(49, 75, 47, .95), rgba(91, 57, 38, .86)),
+    radial-gradient(circle at top, rgba(219, 169, 74, .22), transparent 44%);
+}
+
+.game-slot.busy span,
+.game-slot.busy small {
+  color: rgba(255, 248, 232, .72);
+}
+
+.game-slot.ready {
+  box-shadow: 0 0 0 3px rgba(219, 169, 74, .34), 0 18px 35px rgba(82, 116, 73, .22);
+}
+
+.game-slot.locked {
+  cursor: not-allowed;
+  opacity: .5;
+  background: rgba(36, 26, 16, .08);
+}
+
+.ranch-slot {
+  background:
+    linear-gradient(145deg, rgba(82, 116, 73, .26), rgba(255, 248, 232, .8)),
+    repeating-linear-gradient(-45deg, rgba(49, 75, 47, .12) 0 3px, transparent 3px 11px);
+}
+
+.market-side {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.market-board,
+.market-trade-card {
+  padding: 22px;
+  border-radius: 30px;
+}
+
+.market-board {
+  color: var(--paper-strong);
+  background:
+    linear-gradient(145deg, rgba(36, 26, 16, .95), rgba(49, 75, 47, .92)),
+    radial-gradient(circle at top right, rgba(219, 169, 74, .24), transparent 44%);
+}
+
+.market-board h3 {
+  color: var(--paper-strong);
+}
+
+.market-price {
+  display: block;
+  margin: 8px 0;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.market-board p {
+  color: rgba(255, 248, 232, .68);
+  line-height: 1.7;
+}
+
+.fake-chart {
+  position: relative;
+  height: 118px;
+  margin: 18px 0;
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(255, 248, 232, .09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 248, 232, .08) 1px, transparent 1px);
+  background-size: 100% 25%, 20% 100%;
+}
+
+.fake-chart i {
+  position: absolute;
+  inset: 22px 16px 18px;
+  border-radius: 999px;
+  border-top: 7px solid #f1c35f;
+  transform: skewY(-10deg);
+  box-shadow: 0 16px 0 rgba(241, 195, 95, .1);
+}
+
+.market-trade-card,
+.inventory-cloud,
+.game-card-form,
+.offer-stack {
+  background: rgba(255, 248, 232, .72);
+}
+
+.side-form,
+.game-card-form,
+.offer-stack {
+  display: grid;
+  gap: 13px;
+}
+
+.shop-layout,
+.private-game-grid,
+.market-game-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(320px, 1.1fr);
+  gap: 18px;
+}
+
+.game-card-form,
+.inventory-cloud,
+.offer-stack,
+.trade-explain-card {
+  padding: 20px;
+  border-radius: 28px;
+}
+
+.trade-explain-card {
+  border: 1px solid rgba(36, 26, 16, .12);
+  background: rgba(255, 248, 232, .72);
+  box-shadow: 0 18px 42px rgba(76, 93, 58, .12);
+}
+
+.inventory-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 12px;
+}
+
+.inventory-cloud h3 {
+  width: 100%;
+}
+
+.inventory-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(36, 26, 16, .1);
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(255, 248, 232, .86);
+  cursor: pointer;
+}
+
+.inventory-pill strong {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--paper-strong);
+  background: var(--moss);
+}
+
+.fee-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: 18px;
+  background: rgba(82, 116, 73, .12);
+}
+
+.fee-preview span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.fee-preview strong {
+  font-size: 20px;
+}
+
+.offer-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 13px;
+  border: 1px solid rgba(36, 26, 16, .1);
+  border-radius: 18px;
+  background: rgba(255, 248, 232, .72);
+}
+
+.offer-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.game-bottom-tabs {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, .7);
+  border-radius: 999px;
+  background: rgba(255, 248, 232, .82);
+  box-shadow: 0 18px 40px rgba(63, 78, 46, .18);
+  transform: translateX(-50%);
+}
+
+.game-bottom-tabs button {
+  min-width: 82px;
+  border: 0;
+  padding: 13px 16px;
+  color: var(--muted);
+  border-radius: 999px;
+  font-weight: 900;
+  cursor: pointer;
+  background: transparent;
+}
+
+.game-bottom-tabs button.active {
+  color: var(--paper-strong);
+  background: linear-gradient(145deg, var(--moss), var(--soil));
+}
+
+.game-bottom-tabs .main-tab {
+  min-width: 58px;
+  width: 58px;
+  height: 58px;
+  margin: -24px 6px 0;
+  padding: 0;
+  color: var(--paper-strong);
+  font-size: 32px;
+  background: var(--moss);
+  box-shadow: 0 16px 32px rgba(49, 75, 47, .28);
+}
+
+.float-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(34, 43, 27, .24);
+  backdrop-filter: blur(5px);
+}
+
+.glass-pop {
+  position: relative;
+  width: min(620px, calc(100vw - 40px));
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, .78);
+  border-radius: 34px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .82), rgba(241, 248, 231, .42));
+  box-shadow: 0 30px 90px rgba(31, 42, 24, .28);
+  backdrop-filter: blur(22px);
+}
+
+.glass-pop h3 {
+  font-size: 32px;
+}
+
+.close-pop {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--paper-strong);
+  font-size: 24px;
+  cursor: pointer;
+  background: rgba(36, 26, 16, .78);
+}
+
+.float-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.float-password {
+  margin-top: 18px;
+}
+
 @media (max-width: 1100px) {
   .shell,
   .hero,
-  .split {
+  .split,
+  .game-layout,
+  .shop-layout,
+  .private-game-grid {
     grid-template-columns: 1fr;
   }
 
@@ -750,15 +1282,29 @@ td small {
   .production-toolbar,
   .field-board,
   .private-trade-layout,
-  .private-form {
+    .private-form,
+    .game-topbar,
+    .game-toolbar {
     grid-template-columns: 1fr;
   }
 
-  .slot-grid {
+  .slot-grid,
+  .game-slot-grid,
+  .float-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .button-row {
     flex-direction: column;
+  }
+
+  .game-shell {
+    padding: 16px 16px 102px;
+  }
+
+  .game-bottom-tabs {
+    width: calc(100% - 32px);
+    overflow-x: auto;
+    justify-content: flex-start;
   }
 }

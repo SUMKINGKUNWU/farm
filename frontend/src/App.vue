@@ -33,7 +33,7 @@
     </aside>
 
     <section class="workspace">
-      <PlayerWorkspace v-if="activeMode === 'player'" />
+      <GamePlayerWorkspace v-if="activeMode === 'player'" />
       <AdminWorkspace v-else />
     </section>
   </main>
@@ -506,6 +506,283 @@ const PlayerWorkspace = defineComponent({
           </table>
         </div>
       </section>
+    </div>
+  `
+})
+
+const GamePlayerWorkspace = defineComponent({
+  components: { NoticeBlock, StatCard },
+  setup() {
+    const activeTab = ref('farm')
+    const activeFloat = ref('')
+    const selectedInfo = ref(null)
+    const seedOptions = computed(() => player.seeds.length ? player.seeds : [{ code: 'WHEAT_SEED', name: '小麦种子' }, { code: 'CORN_SEED', name: '玉米种子' }])
+    const animalOptions = computed(() => player.animals.length ? player.animals : [{ code: 'CHICKEN', name: '鸡苗' }, { code: 'COW', name: '奶牛' }])
+    const harvestOptions = computed(() => player.harvests.length ? player.harvests : [{ code: 'WHEAT', name: '小麦' }, { code: 'CORN', name: '玉米' }, { code: 'EGG', name: '鸡蛋' }, { code: 'MILK', name: '牛奶' }])
+    const readyCount = computed(() => player.activeGrowths.filter((growth) => isReady(growth)).length)
+    const allShopOptions = computed(() => [...seedOptions.value, ...animalOptions.value])
+    const currentMarketItem = computed(() => harvestOptions.value.find((item) => item.code === playerForms.marketItemCode) || harvestOptions.value[0])
+    const marketTaxEstimate = computed(() => {
+      const price = Number(player.quote?.currentPrice || 0)
+      const quantity = Number(playerForms.marketQuantity || 0)
+      return Math.round(price * quantity * 0.03)
+    })
+    const privateTaxEstimate = computed(() => Math.round(Number(playerForms.privatePriceAmount || 0) * 0.05))
+    const navItems = [
+      { id: 'farm', label: '农场' },
+      { id: 'shop', label: '商店' },
+      { id: 'market', label: '交易站' },
+      { id: 'private', label: '私下' }
+    ]
+    function showFloat(type, info = null) {
+      selectedInfo.value = info
+      activeFloat.value = type
+    }
+    function closeFloat() {
+      activeFloat.value = ''
+      selectedInfo.value = null
+    }
+    async function submitMarket(side) {
+      await tradeMarket(side)
+      showFloat('trade', { side })
+    }
+    return {
+      player,
+      playerForms,
+      activeTab,
+      activeFloat,
+      selectedInfo,
+      seedOptions,
+      animalOptions,
+      harvestOptions,
+      allShopOptions,
+      currentMarketItem,
+      readyCount,
+      navItems,
+      marketTaxEstimate,
+      privateTaxEstimate,
+      formatMoney,
+      formatDate,
+      formatDuration,
+      slotCells,
+      isReady,
+      purchaseShopItem,
+      startFarmProduction,
+      startRanchProduction,
+      harvestGrowth,
+      createPrivateTrade,
+      acceptPrivateTrade,
+      showFloat,
+      closeFloat,
+      submitMarket
+    }
+  },
+  template: `
+    <div class="game-page">
+      <NoticeBlock :message="player.message" :error="player.error" :detail="player.errorDetail" />
+
+      <section class="game-shell">
+        <div class="game-topbar">
+          <button class="avatar-button" type="button" @click="showFloat('profile')">
+            <span class="avatar-seed">穗</span>
+            <span><b>{{ player.currentUser?.nickname || player.currentUser?.username || player.username || '农场主' }}</b><small>点击查看个人信息</small></span>
+          </button>
+          <div class="wallet-strip">
+            <span>金币</span>
+            <strong>{{ formatMoney(player.summary?.balance ?? 10000) }}</strong>
+          </div>
+          <div class="wallet-strip muted-strip">
+            <span>可收获</span>
+            <strong>{{ readyCount }}</strong>
+          </div>
+          <button class="round-action" type="button" :disabled="player.loading" @click="player.loadDashboard">刷新</button>
+        </div>
+
+        <div class="game-layout">
+          <section class="farm-canvas" v-show="activeTab === 'farm'">
+            <div class="canvas-heading">
+              <div>
+                <span class="section-kicker">Farm & Ranch</span>
+                <h2>农田与牧场</h2>
+              </div>
+              <div class="expand-actions">
+                <button class="button ghost" type="button" :disabled="player.loading" @click="player.expand('FARM')">扩建农田 {{ formatMoney(player.summary?.nextFarmExpandCost) }}</button>
+                <button class="button ghost" type="button" :disabled="player.loading" @click="player.expand('RANCH')">扩建牧场 {{ formatMoney(player.summary?.nextRanchExpandCost) }}</button>
+              </div>
+            </div>
+
+            <div class="production-toolbar game-toolbar">
+              <label>农田种子<select v-model="playerForms.farmItemCode"><option v-for="item in seedOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ formatDuration(item.growSeconds) }}</option></select></label>
+              <label>牧场动物<select v-model="playerForms.ranchItemCode"><option v-for="item in animalOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ formatDuration(item.growSeconds) }}</option></select></label>
+              <button class="button subtle-light" type="button" @click="showFloat('item', currentMarketItem)">物品信息</button>
+            </div>
+
+            <div class="game-field-board">
+              <article class="game-zone">
+                <div class="zone-heading"><span>Farm Plots</span><strong>农田 {{ player.summary?.farmSlots || 0 }}/16</strong></div>
+                <div class="game-slot-grid">
+                  <button v-for="cell in slotCells(player.farm)" :key="'game-farm-' + cell.index" class="game-slot field-slot" :class="{ locked: !cell.unlocked, busy: cell.growth, ready: isReady(cell.growth) }" type="button" :disabled="player.loading || !cell.unlocked" @click="cell.growth ? harvestGrowth(cell.growth.growthId) : startFarmProduction(cell.slot.id)">
+                    <span>#{{ cell.index }}</span>
+                    <strong>{{ !cell.unlocked ? '未扩建' : cell.growth ? cell.growth.outputItemCode : '空闲' }}</strong>
+                    <small>{{ cell.growth ? (isReady(cell.growth) ? '可收获' : formatDate(cell.growth.readyAt)) : '点击播种' }}</small>
+                  </button>
+                </div>
+              </article>
+              <article class="game-zone ranch-game-zone">
+                <div class="zone-heading"><span>Ranch Slots</span><strong>牧场 {{ player.summary?.ranchSlots || 0 }}/16</strong></div>
+                <div class="game-slot-grid">
+                  <button v-for="cell in slotCells(player.ranch)" :key="'game-ranch-' + cell.index" class="game-slot ranch-slot" :class="{ locked: !cell.unlocked, busy: cell.growth, ready: isReady(cell.growth) }" type="button" :disabled="player.loading || !cell.unlocked" @click="cell.growth ? harvestGrowth(cell.growth.growthId) : startRanchProduction(cell.slot.id)">
+                    <span>#{{ cell.index }}</span>
+                    <strong>{{ !cell.unlocked ? '未扩建' : cell.growth ? cell.growth.outputItemCode : '空闲' }}</strong>
+                    <small>{{ cell.growth ? (isReady(cell.growth) ? '可收获' : formatDate(cell.growth.readyAt)) : '点击养殖' }}</small>
+                  </button>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="farm-canvas" v-show="activeTab === 'shop'">
+            <div class="canvas-heading">
+              <div><span class="section-kicker">Shop</span><h2>农场商店</h2></div>
+              <button class="button ghost" type="button" @click="showFloat('item', allShopOptions[0])">查看商品浮层</button>
+            </div>
+            <div class="shop-layout">
+              <form class="game-card-form" @submit.prevent="purchaseShopItem">
+                <label>商品<select v-model="playerForms.shopItemCode"><option v-for="item in allShopOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ item.code }}</option></select></label>
+                <label>数量<input v-model.number="playerForms.shopQuantity" type="number" min="1" /></label>
+                <label>交易密码<input v-model="playerForms.shopTradePassword" type="password" placeholder="6 位数字" /></label>
+                <button class="button wide" type="submit" :disabled="player.loading">购买入库</button>
+              </form>
+              <div class="inventory-cloud">
+                <h3>库存</h3>
+                <button v-for="item in player.inventory" :key="item.itemId" type="button" class="inventory-pill" @click="showFloat('item', item)">
+                  <span>{{ item.itemName }}</span><strong>{{ item.availableQuantity }}</strong>
+                </button>
+                <p v-if="!player.inventory.length" class="muted">暂无库存，先购买种子或动物。</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="farm-canvas market-canvas" v-show="activeTab === 'market'">
+            <div class="canvas-heading">
+              <div><span class="section-kicker">Market</span><h2>交易站买卖</h2></div>
+              <button class="button ghost" type="button" @click="showFloat('trade')">交易确认浮层</button>
+            </div>
+            <div class="market-game-grid">
+              <form class="game-card-form" @submit.prevent="submitMarket('BUY')">
+                <label>商品<select v-model="playerForms.marketItemCode"><option v-for="item in harvestOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ item.code }}</option></select></label>
+                <label>数量<input v-model.number="playerForms.marketQuantity" type="number" min="1" /></label>
+                <label>交易密码<input v-model="playerForms.marketTradePassword" type="password" placeholder="6 位数字" /></label>
+                <label>大宗令牌<input v-model.trim="playerForms.marketBulkTokenCode" placeholder="非大宗可留空" /></label>
+                <div class="fee-preview"><span>交易站税费 3%</span><strong>{{ formatMoney(marketTaxEstimate) }}</strong></div>
+                <button class="button" type="submit" :disabled="player.loading">买入</button>
+                <button class="button ghost" type="button" :disabled="player.loading" @click="submitMarket('SELL')">卖出</button>
+              </form>
+              <article class="trade-explain-card">
+                <span class="section-kicker">Price Rule</span>
+                <h3>{{ currentMarketItem?.name || playerForms.marketItemCode }}</h3>
+                <p class="muted">交易站价格按最近成交量、成交价和系统保护参数浮动。大宗交易需要令牌，普通交易只需要交易密码。</p>
+                <div class="fee-preview"><span>24h 成交量</span><strong>{{ player.quote?.volume24h ?? '-' }}</strong></div>
+                <div class="fee-preview"><span>24h 成交笔数</span><strong>{{ player.quote?.tradeCount24h ?? '-' }}</strong></div>
+              </article>
+            </div>
+          </section>
+
+          <aside class="market-side">
+            <div class="market-board">
+              <span class="section-kicker">Market Station</span>
+              <h3>{{ player.quote?.itemCode || playerForms.marketItemCode }}</h3>
+              <strong class="market-price">{{ formatMoney(player.quote?.currentPrice) }}</strong>
+              <p>最近成交量影响价格，交易站税费 3%。</p>
+              <div class="fake-chart"><i></i></div>
+              <button class="button wide" type="button" :disabled="player.loading" @click="player.quote(playerForms.marketItemCode)">刷新行情</button>
+            </div>
+
+            <div class="market-trade-card">
+              <h3>税费规则</h3>
+              <div class="fee-preview"><span>交易站</span><strong>3%</strong></div>
+              <div class="fee-preview"><span>私下交易</span><strong>5%</strong></div>
+              <div class="fee-preview"><span>令牌</span><strong>{{ player.bulkTokens.length }}</strong></div>
+            </div>
+          </aside>
+
+          <section class="farm-canvas private-canvas" v-show="activeTab === 'private'">
+            <div class="canvas-heading">
+              <div><span class="section-kicker">Private Trade</span><h2>私下交易</h2></div>
+              <button class="button ghost" type="button" @click="showFloat('trade')">交易确认浮层</button>
+            </div>
+            <div class="private-game-grid">
+              <form class="game-card-form" @submit.prevent="createPrivateTrade">
+                <label>买方用户 ID<input v-model.trim="playerForms.privateBuyerUserId" placeholder="对方玩家 UUID" /></label>
+                <label>商品<select v-model="playerForms.privateItemCode"><option v-for="item in harvestOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ item.code }}</option></select></label>
+                <label>数量<input v-model.number="playerForms.privateQuantity" type="number" min="1" /></label>
+                <label>总价金币<input v-model.number="playerForms.privatePriceAmount" type="number" min="1" /></label>
+                <label>交易密码<input v-model="playerForms.privateTradePassword" type="password" placeholder="卖方交易密码" /></label>
+                <div class="fee-preview"><span>私下交易税 5%</span><strong>{{ formatMoney(privateTaxEstimate) }}</strong></div>
+                <button class="button wide" type="submit" :disabled="player.loading">创建报价</button>
+              </form>
+              <div class="offer-stack">
+                <label>接受报价交易密码<input v-model="playerForms.privateAcceptPassword" type="password" placeholder="买方交易密码" /></label>
+                <label>大宗令牌<input v-model.trim="playerForms.privateBulkTokenCode" placeholder="可选" /></label>
+                <div v-for="offer in player.privateTrades" :key="offer.offerId" class="offer-card">
+                  <strong>{{ offer.itemCode }} × {{ offer.quantity }}</strong>
+                  <span>{{ formatMoney(offer.priceAmount) }} · {{ offer.status }}</span>
+                  <button v-if="offer.buyerUserId === player.currentUser?.userId && offer.status === 'WAIT_ACCEPT'" class="button mini" type="button" :disabled="player.loading" @click="acceptPrivateTrade(offer.offerId)">接受</button>
+                  <button v-else-if="offer.sellerUserId === player.currentUser?.userId && offer.status === 'WAIT_ACCEPT'" class="button ghost mini" type="button" :disabled="player.loading" @click="player.cancelPrivateTrade(offer.offerId)">取消</button>
+                </div>
+                <p v-if="!player.privateTrades.length" class="muted">暂无私下交易报价。</p>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <nav class="game-bottom-tabs">
+          <button v-for="item in navItems" :key="item.id" type="button" :class="{ active: activeTab === item.id }" @click="activeTab = item.id">{{ item.label }}</button>
+          <button class="main-tab" type="button" @click="showFloat('profile')">+</button>
+        </nav>
+      </section>
+
+      <div v-if="activeFloat" class="float-layer" @click.self="closeFloat">
+        <article class="glass-pop">
+          <button class="close-pop" type="button" @click="closeFloat">×</button>
+          <template v-if="activeFloat === 'profile'">
+            <span class="section-kicker">Profile</span>
+            <h3>{{ player.currentUser?.nickname || player.currentUser?.username || '农场主' }}</h3>
+            <div class="float-grid">
+              <StatCard label="可用金币" :value="formatMoney(player.summary?.balance)" />
+              <StatCard label="锁定金币" :value="formatMoney(player.summary?.lockedBalance)" />
+              <StatCard label="大宗令牌" :value="player.bulkTokens.length" />
+              <StatCard label="交易密码" :value="player.summary?.tradePasswordSet ? '已设置' : '未设置'" />
+            </div>
+            <form class="compact-form float-password" @submit.prevent="player.setTradePassword(playerForms.tradePassword)">
+              <label>设置交易密码<input v-model="playerForms.tradePassword" type="password" maxlength="6" placeholder="6 位数字" /></label>
+              <button class="button" type="submit" :disabled="player.loading">保存</button>
+            </form>
+          </template>
+          <template v-else-if="activeFloat === 'item'">
+            <span class="section-kicker">Item Info</span>
+            <h3>{{ selectedInfo?.name || selectedInfo?.itemName || selectedInfo?.itemCode || '物品信息' }}</h3>
+            <p class="muted">点击物品、库存、地块时展示，不占用主界面空间。</p>
+            <div class="float-grid">
+              <StatCard label="编码" :value="selectedInfo?.code || selectedInfo?.itemCode || '-'" />
+              <StatCard label="类型" :value="selectedInfo?.itemType || '-'" />
+              <StatCard label="可用数量" :value="selectedInfo?.availableQuantity ?? '-'" />
+              <StatCard label="成长时间" :value="formatDuration(selectedInfo?.growSeconds)" />
+            </div>
+          </template>
+          <template v-else>
+            <span class="section-kicker">Trade Confirm</span>
+            <h3>交易确认</h3>
+            <p class="muted">交易站收取 3% 税，私下交易收取 5% 税；大宗交易需要令牌，双方私下交易都要输入交易密码。</p>
+            <div class="float-grid">
+              <StatCard label="交易商品" :value="playerForms.marketItemCode" />
+              <StatCard label="交易数量" :value="playerForms.marketQuantity" />
+              <StatCard label="交易站预估税" :value="formatMoney(marketTaxEstimate)" />
+              <StatCard label="私下预估税" :value="formatMoney(privateTaxEstimate)" />
+            </div>
+          </template>
+        </article>
+      </div>
     </div>
   `
 })
