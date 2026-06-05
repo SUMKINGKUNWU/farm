@@ -70,6 +70,32 @@ public class ProductionService {
         );
     }
 
+    public List<GrowthInstanceResponse> growthInstances(UUID userId) {
+        ensureActiveUser(userId);
+        return jdbcTemplate.query(
+                "select g.id, g.slot_type, g.slot_id, input_item.code as input_code, output_item.code as output_code, " +
+                        "g.output_quantity, g.started_at, g.ready_at, g.harvested_at, g.status " +
+                        "from growth_instances g " +
+                        "join items input_item on input_item.id = g.input_item_id " +
+                        "join items output_item on output_item.id = g.output_item_id " +
+                        "where g.user_id = ? " +
+                        "order by case when g.status in ('GROWING', 'READY') then 0 else 1 end, g.ready_at desc",
+                (rs, rowNum) -> new GrowthInstanceResponse(
+                        UUID.fromString(rs.getString("id")),
+                        rs.getString("slot_type"),
+                        UUID.fromString(rs.getString("slot_id")),
+                        rs.getString("input_code"),
+                        rs.getString("output_code"),
+                        rs.getLong("output_quantity"),
+                        rs.getObject("started_at", OffsetDateTime.class),
+                        rs.getObject("ready_at", OffsetDateTime.class),
+                        rs.getObject("harvested_at", OffsetDateTime.class),
+                        rs.getString("status")
+                ),
+                userId
+        );
+    }
+
     @Transactional
     public ProductionResponse start(UUID userId, String slotType, UUID slotId, String itemCode) {
         ensureActiveUser(userId);

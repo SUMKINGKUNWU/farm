@@ -29,6 +29,11 @@ public class ProductionController {
         return productionService.inventory(userId);
     }
 
+    @GetMapping("/users/{userId}/growth")
+    public List<GrowthInstanceResponse> growthInstances(@PathVariable UUID userId) {
+        return productionService.growthInstances(userId);
+    }
+
     @PostMapping("/users/{userId}/farm/plots/{plotId}/plant")
     public ProductionResponse plant(@PathVariable UUID userId, @PathVariable UUID plotId, @RequestParam String itemCode) {
         return productionService.start(userId, "FARM", plotId, itemCode);
@@ -44,4 +49,3 @@ public class ProductionController {
         return productionService.harvest(userId, growthId);
     }
 }
-

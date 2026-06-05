@@ -19,6 +19,7 @@ import com.farm.exchange.private_trade.PrivateTradeResponse;
 import com.farm.exchange.private_trade.PrivateTradeService;
 import com.farm.exchange.private_trade.PrivateTradeSettlementResponse;
 import com.farm.exchange.production.HarvestResponse;
+import com.farm.exchange.production.GrowthInstanceResponse;
 import com.farm.exchange.production.InventoryResponse;
 import com.farm.exchange.production.ProductionResponse;
 import com.farm.exchange.production.ProductionService;
@@ -106,6 +107,11 @@ public class MeController {
     @GetMapping("/inventory")
     public List<InventoryResponse> inventory(@RequestHeader(value = "Authorization", required = false) String authorization) {
         return productionService.inventory(currentUserId(authorization));
+    }
+
+    @GetMapping("/growth")
+    public List<GrowthInstanceResponse> growthInstances(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return productionService.growthInstances(currentUserId(authorization));
     }
 
     @PostMapping("/farm/plots/{plotId}/plant")

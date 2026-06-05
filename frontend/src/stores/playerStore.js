@@ -28,6 +28,7 @@ export const usePlayerStore = defineStore('player', {
     ranch: null,
     inventory: [],
     items: [],
+    growthInstances: [],
     quote: null,
     bulkTokens: [],
     lastProduction: null,
@@ -49,6 +50,9 @@ export const usePlayerStore = defineStore('player', {
     },
     harvests(state) {
       return state.items.filter((item) => item.itemType === 'HARVEST')
+    },
+    activeGrowths(state) {
+      return state.growthInstances.filter((item) => ['GROWING', 'READY'].includes(item.status))
     }
   },
   actions: {
@@ -141,6 +145,7 @@ export const usePlayerStore = defineStore('player', {
       this.farm = null
       this.ranch = null
       this.inventory = []
+      this.growthInstances = []
       this.bulkTokens = []
       this.lastProduction = null
       this.lastTrade = null
@@ -165,17 +170,19 @@ export const usePlayerStore = defineStore('player', {
     async loadDashboard() {
       return this.run(async () => {
         const headers = this.authHeaders()
-        const [summary, farm, ranch, inventory, bulkTokens] = await Promise.all([
+        const [summary, farm, ranch, inventory, growthInstances, bulkTokens] = await Promise.all([
           requestJson('/api/me/summary', { headers }),
           requestJson('/api/me/farm/plots', { headers }),
           requestJson('/api/me/ranch/slots', { headers }),
           requestJson('/api/me/inventory', { headers }),
+          requestJson('/api/me/growth', { headers }),
           requestJson('/api/me/bulk-tokens', { headers })
         ])
         this.summary = summary
         this.farm = farm
         this.ranch = ranch
         this.inventory = inventory
+        this.growthInstances = growthInstances
         this.bulkTokens = bulkTokens
         return summary
       }, '玩家数据已刷新')

@@ -270,6 +270,14 @@ class FarmExchangeApplicationTests {
         String growthId = extractJsonString(plantResult.getResponse().getContentAsString(), "growthId");
         String ranchGrowthId = extractJsonString(raiseResult.getResponse().getContentAsString(), "growthId");
 
+        mockMvc.perform(get("/api/users/" + userId + "/growth"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].status").value("GROWING"))
+                .andExpect(jsonPath("$[0].inputItemCode").isString())
+                .andExpect(jsonPath("$[0].outputItemCode").isString())
+                .andExpect(jsonPath("$[0].slotType").isString());
+
         Long wheatSeedAfterPlant = jdbcTemplate.queryForObject(
                 "select pi.available_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT_SEED'",
                 Long.class,
@@ -294,6 +302,12 @@ class FarmExchangeApplicationTests {
                 .andExpect(jsonPath("$.outputItemCode").value("EGG"))
                 .andExpect(jsonPath("$.outputQuantity").value(20))
                 .andExpect(jsonPath("$.availableQuantityAfter").value(20));
+
+        mockMvc.perform(get("/api/users/" + userId + "/growth"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].status").value("HARVESTED"))
+                .andExpect(jsonPath("$[1].status").value("HARVESTED"));
 
         mockMvc.perform(post("/api/users/" + userId + "/growth/" + growthId + "/harvest"))
                 .andExpect(status().isConflict());

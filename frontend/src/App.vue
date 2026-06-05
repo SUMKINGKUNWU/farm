@@ -108,8 +108,26 @@ function slotLabel(slot) {
   return `#${slot.slotIndex} ${slot.status}`
 }
 
-function firstEmptySlot(slotList) {
-  return slotList?.slots?.find((slot) => slot.status === 'EMPTY')
+function growthBySlot(slotId) {
+  return player.activeGrowths.find((growth) => growth.slotId === slotId)
+}
+
+function isReady(growth) {
+  return Boolean(growth && new Date(growth.readyAt).getTime() <= Date.now())
+}
+
+function slotCells(slotList) {
+  const slots = slotList?.slots || []
+  const maxSlots = slotList?.maxSlots || 16
+  return Array.from({ length: maxSlots }, (_, index) => {
+    const slot = slots[index]
+    return {
+      index: index + 1,
+      unlocked: Boolean(slot),
+      slot,
+      growth: slot ? growthBySlot(slot.id) : null
+    }
+  })
 }
 
 async function saveTax(type) {
@@ -135,16 +153,12 @@ async function purchaseShopItem() {
   })
 }
 
-async function startFarmProduction() {
-  const slot = firstEmptySlot(player.farm)
-  if (!slot) throw new Error('没有空闲农田栏位')
-  await player.startProduction('FARM', slot.id, playerForms.farmItemCode)
+async function startFarmProduction(slotId) {
+  await player.startProduction('FARM', slotId, playerForms.farmItemCode)
 }
 
-async function startRanchProduction() {
-  const slot = firstEmptySlot(player.ranch)
-  if (!slot) throw new Error('没有空闲牧场栏位')
-  await player.startProduction('RANCH', slot.id, playerForms.ranchItemCode)
+async function startRanchProduction(slotId) {
+  await player.startProduction('RANCH', slotId, playerForms.ranchItemCode)
 }
 
 async function tradeMarket(side) {
@@ -156,9 +170,7 @@ async function tradeMarket(side) {
   })
 }
 
-async function harvestLatest() {
-  const growthId = playerForms.harvestGrowthId || player.lastProduction?.growthId
-  if (!growthId) throw new Error('请先填写生产批次 ID，或先开始一次生产')
+async function harvestGrowth(growthId) {
   await player.harvest(growthId)
 }
 
@@ -273,11 +285,12 @@ const PlayerWorkspace = defineComponent({
       formatDate,
       formatDuration,
       slotLabel,
-      firstEmptySlot,
+      slotCells,
+      isReady,
       purchaseShopItem,
       startFarmProduction,
       startRanchProduction,
-      harvestLatest,
+      harvestGrowth,
       tradeMarket
     }
   },
@@ -346,27 +359,52 @@ const PlayerWorkspace = defineComponent({
             <button class="button ghost" type="button" :disabled="player.loading" @click="player.expand('RANCH')">扩建牧场</button>
           </div>
         </div>
-        <div class="production-grid">
-          <article class="tax-card">
-            <strong>农田种植</strong>
-            <p class="muted">空闲栏位：{{ slotLabel(firstEmptySlot(player.farm)) }}</p>
-            <label>种子<select v-model="playerForms.farmItemCode"><option v-for="item in seedOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ formatDuration(item.growSeconds) }}</option></select></label>
-            <button class="button" type="button" :disabled="player.loading" @click="startFarmProduction">开始种植</button>
+        <div class="production-toolbar">
+          <label>农田种子<select v-model="playerForms.farmItemCode"><option v-for="item in seedOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ formatDuration(item.growSeconds) }}</option></select></label>
+          <label>牧场动物<select v-model="playerForms.ranchItemCode"><option v-for="item in animalOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ formatDuration(item.growSeconds) }}</option></select></label>
+          <div class="growth-summary">
+            <span>进行中批次</span>
+            <strong>{{ player.activeGrowths.length }}</strong>
+          </div>
+        </div>
+        <div class="field-board">
+          <article class="field-zone">
+            <div class="zone-heading"><span>Farm Plots</span><strong>农田 16 格</strong></div>
+            <div class="slot-grid">
+              <button v-for="cell in slotCells(player.farm)" :key="'farm-' + cell.index" class="slot-cell" :class="{ locked: !cell.unlocked, busy: cell.growth, ready: isReady(cell.growth) }" type="button" :disabled="player.loading || !cell.unlocked" @click="cell.growth ? harvestGrowth(cell.growth.growthId) : startFarmProduction(cell.slot.id)">
+                <span>#{{ cell.index }}</span>
+                <strong>{{ !cell.unlocked ? '未扩建' : cell.growth ? cell.growth.outputItemCode : '空闲' }}</strong>
+                <small>{{ cell.growth ? (isReady(cell.growth) ? '可收获' : formatDate(cell.growth.readyAt)) : '点击种植' }}</small>
+              </button>
+            </div>
           </article>
-          <article class="tax-card">
-            <strong>牧场养殖</strong>
-            <p class="muted">空闲栏位：{{ slotLabel(firstEmptySlot(player.ranch)) }}</p>
-            <label>动物<select v-model="playerForms.ranchItemCode"><option v-for="item in animalOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ formatDuration(item.growSeconds) }}</option></select></label>
-            <button class="button" type="button" :disabled="player.loading" @click="startRanchProduction">开始养殖</button>
+          <article class="field-zone ranch-zone">
+            <div class="zone-heading"><span>Ranch Slots</span><strong>牧场 16 格</strong></div>
+            <div class="slot-grid">
+              <button v-for="cell in slotCells(player.ranch)" :key="'ranch-' + cell.index" class="slot-cell ranch-cell" :class="{ locked: !cell.unlocked, busy: cell.growth, ready: isReady(cell.growth) }" type="button" :disabled="player.loading || !cell.unlocked" @click="cell.growth ? harvestGrowth(cell.growth.growthId) : startRanchProduction(cell.slot.id)">
+                <span>#{{ cell.index }}</span>
+                <strong>{{ !cell.unlocked ? '未扩建' : cell.growth ? cell.growth.outputItemCode : '空闲' }}</strong>
+                <small>{{ cell.growth ? (isReady(cell.growth) ? '可收获' : formatDate(cell.growth.readyAt)) : '点击养殖' }}</small>
+              </button>
+            </div>
           </article>
-          <article class="token-ticket">
-            <span>最近生产批次</span>
-            <strong>{{ player.lastProduction?.growthId || '尚未开始' }}</strong>
-            <p>产出：{{ player.lastProduction?.outputItemCode || '-' }} × {{ player.lastProduction?.outputQuantity || '-' }}</p>
-            <p>成熟：{{ formatDate(player.lastProduction?.readyAt) }}</p>
-            <label>手动收获批次 ID<input v-model.trim="playerForms.harvestGrowthId" placeholder="可粘贴 growthId" /></label>
-            <button class="button ghost" type="button" :disabled="player.loading" @click="harvestLatest">收获</button>
-          </article>
+        </div>
+        <div class="table-wrap growth-table">
+          <table>
+            <thead><tr><th>批次</th><th>栏位</th><th>投入</th><th>产出</th><th>成熟时间</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr v-for="growth in player.growthInstances" :key="growth.growthId">
+                <td><small>{{ growth.growthId }}</small></td>
+                <td>{{ growth.slotType }} #{{ growth.slotId.slice(0, 8) }}</td>
+                <td>{{ growth.inputItemCode }}</td>
+                <td>{{ growth.outputItemCode }} × {{ growth.outputQuantity }}</td>
+                <td>{{ formatDate(growth.readyAt) }}</td>
+                <td>{{ growth.status }}</td>
+                <td><button class="button ghost mini" type="button" :disabled="player.loading || growth.status === 'HARVESTED'" @click="harvestGrowth(growth.growthId)">收获</button></td>
+              </tr>
+              <tr v-if="!player.growthInstances.length"><td colspan="7">暂无生产批次</td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
