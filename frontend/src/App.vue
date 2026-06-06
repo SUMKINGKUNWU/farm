@@ -34,16 +34,26 @@
 
     <section class="workspace">
       <GamePlayerWorkspace v-if="activeMode === 'player'" />
-      <AdminWorkspace v-else />
+      <AdminWorkspace
+        v-else
+        :admin-tax-types="adminTaxTypes"
+        :tax-form="taxForm"
+        :token-form="tokenForm"
+        :format-rate="formatRate"
+        :format-money="formatMoney"
+        :format-date="formatDate"
+        :save-tax="saveTax"
+        :issue-token="issueToken"
+      />
     </section>
   </main>
 </template>
 <script setup>
-import { computed, defineComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import * as echarts from 'echarts'
+import { computed, defineComponent, onMounted, reactive, ref, watch } from 'vue'
 import { useAdminStore } from './stores/adminStore'
 import { usePlayerStore } from './stores/playerStore'
 import GamePlayerWorkspace from './components/GamePlayerWorkspace.vue'
+import AdminWorkspace from './components/AdminWorkspace.vue'
 import NoticeBlock from './components/common/NoticeBlock.vue'
 import StatCard from './components/common/StatCard.vue'
 
@@ -473,93 +483,6 @@ const PlayerWorkspace = defineComponent({
             </tbody>
           </table>
         </div>
-      </section>
-    </div>
-  `
-})
-
-const AdminWorkspace = defineComponent({
-  components: { NoticeBlock, StatCard },
-  setup() {
-    const chartEl = ref(null)
-    let chart
-    function renderChart() {
-      if (!chartEl.value) return
-      if (!chart) chart = echarts.init(chartEl.value)
-      const rows = admin.trades.slice().reverse()
-      chart.setOption({
-        backgroundColor: 'transparent',
-        tooltip: { trigger: 'axis' },
-        grid: { left: 42, right: 18, top: 24, bottom: 34 },
-        xAxis: { type: 'category', data: rows.map((item) => item.itemCode), axisLine: { lineStyle: { color: '#9b8a6c' } }, axisLabel: { color: '#6d604c' } },
-        yAxis: { type: 'value', axisLabel: { color: '#6d604c' }, splitLine: { lineStyle: { color: 'rgba(88, 65, 38, .12)' } } },
-        series: [
-          { name: '浜ゆ槗閲戦', type: 'bar', data: rows.map((item) => item.tradeAmount), itemStyle: { color: '#527449', borderRadius: [8, 8, 0, 0] } },
-          { name: '绋庤垂', type: 'line', data: rows.map((item) => item.taxAmount), smooth: true, lineStyle: { color: '#b96f2b', width: 3 }, itemStyle: { color: '#b96f2b' } }
-        ]
-      })
-    }
-    watch(() => admin.trades, () => nextTick(renderChart), { deep: true })
-    onMounted(() => {
-      renderChart()
-      window.addEventListener('resize', renderChart)
-    })
-    onBeforeUnmount(() => {
-      window.removeEventListener('resize', renderChart)
-      chart?.dispose()
-    })
-    return { admin, adminTaxTypes, taxForm, tokenForm, chartEl, formatRate, formatMoney, formatDate, saveTax, issueToken }
-  },
-  template: `
-    <div>
-      <header class="hero">
-        <div>
-          <span class="eyebrow">Bearer Token Admin Console</span>
-          <h2>鐢ㄧ櫥褰曟€佺鐞嗙粡娴庡弬鏁般€佷护鐗屽彂鏀惧拰鐜╁璧勪骇鏍稿銆?/h2>
-          <p>绠＄悊绔帴鍙ｉ€氳繃 Authorization: Bearer token 閴存潈锛屽悗绔細瑙ｆ瀽 token 骞跺鏍告暟鎹簱涓殑绠＄悊鍛樿鑹层€?/p>
-        </div>
-        <div class="hero-stats">
-          <StatCard label="浜ゆ槗绔欑◣鐜? :value="formatRate(admin.marketTax?.rateBasisPoints)" />
-          <StatCard label="绉佷笅绋庣巼" :value="formatRate(admin.privateTax?.rateBasisPoints)" />
-          <StatCard label="鐩爣浣欓" :value="formatMoney(admin.assets?.balance)" />
-        </div>
-      </header>
-      <NoticeBlock :message="admin.message" :error="admin.error" :detail="admin.errorDetail" />
-      <section id="tax" class="panel tax-panel">
-        <div class="panel-heading"><div><span class="section-kicker">Tax Config</span><h3>绋庣巼閰嶇疆</h3></div><button class="button ghost" type="button" :disabled="admin.loading" @click="admin.loadTaxConfigs">璇诲彇绋庣巼</button></div>
-        <div class="tax-grid">
-          <article v-for="type in adminTaxTypes" :key="type.code" class="tax-card">
-            <div><span>{{ type.name }}</span><strong>{{ formatRate(taxForm[type.code].rateBasisPoints) }}</strong></div>
-            <label>Basis Points<input v-model.number="taxForm[type.code].rateBasisPoints" type="number" min="0" max="5000" /></label>
-            <label>璋冩暣鍘熷洜<input v-model.trim="taxForm[type.code].reason" placeholder="渚嬪锛氭椿鍔ㄦ湡闄嶄綆浜ゆ槗绔欑◣鐜? /></label>
-            <button class="button" type="button" :disabled="admin.loading" @click="saveTax(type.code)">淇濆瓨 {{ type.name }}</button>
-          </article>
-        </div>
-      </section>
-      <section id="token" class="panel split">
-        <div>
-          <span class="section-kicker">Bulk Token</span><h3>鍙戞斁澶у畻浜ゆ槗浠ょ墝</h3>
-          <p class="muted">鐢ㄤ簬楂樻暟閲忔垨楂橀噾棰濅氦鏄擄紝鎴愪氦鏃舵墸鍑忔鏁板苟绱浣跨敤閲戦銆?/p>
-          <form class="form-grid" @submit.prevent="issueToken">
-            <label>鍏佽鍟嗗搧绫诲瀷<select v-model="tokenForm.allowedItemType"><option value="HARVEST">HARVEST 鏀惰幏鐗?/option><option value="">涓嶉檺绫诲瀷</option></select></label>
-            <label>鍗曠瑪闄愰<input v-model.number="tokenForm.singleTradeLimit" type="number" min="1" /></label>
-            <label>鎬婚檺棰?input v-model.number="tokenForm.totalLimit" type="number" min="1" /></label>
-            <label>鍙敤娆℃暟<input v-model.number="tokenForm.remainingUses" type="number" min="1" /></label>
-            <label>鏈夋晥灏忔椂<input v-model.number="tokenForm.expireHours" type="number" min="1" /></label>
-            <button class="button wide" type="submit" :disabled="admin.loading">鍙戞斁浠ょ墝</button>
-          </form>
-        </div>
-        <article class="token-ticket"><span>鏈€杩戝彂鏀?/span><strong>{{ admin.issuedToken?.tokenCode || '灏氭湭鍙戞斁' }}</strong><p>娆℃暟锛歿{ admin.issuedToken?.remainingUses ?? '-' }} / 鐘舵€侊細{{ admin.issuedToken?.status || '-' }}</p><p>鍒版湡锛歿{ formatDate(admin.issuedToken?.expiresAt) }}</p></article>
-      </section>
-      <section id="assets" class="panel">
-        <div class="panel-heading"><div><span class="section-kicker">Player Assets</span><h3>鐜╁璧勪骇</h3></div><button class="button ghost" type="button" :disabled="admin.loading" @click="admin.loadAssets">璇诲彇璧勪骇</button></div>
-        <div class="asset-summary"><StatCard label="鐢ㄦ埛鍚? :value="admin.assets?.username || '-'" /><StatCard label="鐘舵€? :value="admin.assets?.status || '-'" /><StatCard label="鍙敤閲戝竵" :value="formatMoney(admin.assets?.balance)" /><StatCard label="閿佸畾閲戝竵" :value="formatMoney(admin.assets?.lockedBalance)" /></div>
-        <div class="table-wrap"><table><thead><tr><th>鍟嗗搧</th><th>绫诲瀷</th><th>鍙敤</th><th>閿佸畾</th></tr></thead><tbody><tr v-for="item in admin.assets?.inventory || []" :key="item.itemId"><td>{{ item.itemName }} <small>{{ item.itemCode }}</small></td><td>{{ item.itemType }}</td><td>{{ item.availableQuantity }}</td><td>{{ item.lockedQuantity }}</td></tr><tr v-if="!admin.assets?.inventory?.length"><td colspan="4">鏆傛棤搴撳瓨鏁版嵁</td></tr></tbody></table></div>
-      </section>
-      <section id="trades" class="panel">
-        <div class="panel-heading"><div><span class="section-kicker">Trade Records</span><h3>浜ゆ槗璁板綍</h3></div><button class="button ghost" type="button" :disabled="admin.loading" @click="admin.loadTrades">璇诲彇浜ゆ槗</button></div>
-        <div ref="chartEl" class="chart"></div>
-        <div class="table-wrap"><table><thead><tr><th>鏉ユ簮</th><th>鏂瑰悜</th><th>鍟嗗搧</th><th>鏁伴噺</th><th>閲戦</th><th>绋庤垂</th><th>鐘舵€?/th></tr></thead><tbody><tr v-for="trade in admin.trades" :key="trade.tradeId"><td>{{ trade.tradeSource }}</td><td>{{ trade.side }}</td><td>{{ trade.itemCode }}</td><td>{{ trade.quantity }}</td><td>{{ formatMoney(trade.tradeAmount) }}</td><td>{{ formatMoney(trade.taxAmount) }}</td><td>{{ trade.status }}</td></tr><tr v-if="!admin.trades.length"><td colspan="7">鏆傛棤浜ゆ槗璁板綍</td></tr></tbody></table></div>
       </section>
     </div>
   `
