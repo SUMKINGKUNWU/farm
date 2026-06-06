@@ -534,6 +534,19 @@ const GamePlayerWorkspace = defineComponent({
       { id: 'market', label: '交易站' },
       { id: 'private', label: '私下' }
     ]
+    function slotStatusText(cell) {
+      if (!cell?.unlocked) return 'Locked'
+      if (!cell.growth) return 'Open'
+      return isReady(cell.growth) ? 'Ready' : 'Growing'
+    }
+    function slotActionText(cell, emptyText) {
+      if (!cell?.unlocked) return 'Expand first'
+      if (!cell.growth) return emptyText
+      return isReady(cell.growth) ? 'Click harvest' : formatDate(cell.growth.readyAt)
+    }
+    function tabIcon(id) {
+      return { farm: '田', shop: '仓', market: '市', private: '约' }[id] || '+'
+    }
     function showFloat(type, info = null) {
       selectedInfo.value = info
       activeFloat.value = type
@@ -561,6 +574,9 @@ const GamePlayerWorkspace = defineComponent({
       navItems,
       marketTaxEstimate,
       privateTaxEstimate,
+      slotStatusText,
+      slotActionText,
+      tabIcon,
       formatMoney,
       formatDate,
       formatDuration,
@@ -622,9 +638,9 @@ const GamePlayerWorkspace = defineComponent({
                 <div class="zone-heading"><span>Farm Plots</span><strong>农田 {{ player.summary?.farmSlots || 0 }}/16</strong></div>
                 <div class="game-slot-grid">
                   <button v-for="cell in slotCells(player.farm)" :key="'game-farm-' + cell.index" class="game-slot field-slot" :class="{ locked: !cell.unlocked, busy: cell.growth, ready: isReady(cell.growth) }" type="button" :disabled="player.loading || !cell.unlocked" @click="cell.growth ? harvestGrowth(cell.growth.growthId) : startFarmProduction(cell.slot.id)">
-                    <span>#{{ cell.index }}</span>
+                    <span class="slot-top"><i>#{{ cell.index }}</i><b>{{ slotStatusText(cell) }}</b></span>
                     <strong>{{ !cell.unlocked ? '未扩建' : cell.growth ? cell.growth.outputItemCode : '空闲' }}</strong>
-                    <small>{{ cell.growth ? (isReady(cell.growth) ? '可收获' : formatDate(cell.growth.readyAt)) : '点击播种' }}</small>
+                    <small>{{ slotActionText(cell, 'Plant') }}</small>
                   </button>
                 </div>
               </article>
@@ -632,9 +648,9 @@ const GamePlayerWorkspace = defineComponent({
                 <div class="zone-heading"><span>Ranch Slots</span><strong>牧场 {{ player.summary?.ranchSlots || 0 }}/16</strong></div>
                 <div class="game-slot-grid">
                   <button v-for="cell in slotCells(player.ranch)" :key="'game-ranch-' + cell.index" class="game-slot ranch-slot" :class="{ locked: !cell.unlocked, busy: cell.growth, ready: isReady(cell.growth) }" type="button" :disabled="player.loading || !cell.unlocked" @click="cell.growth ? harvestGrowth(cell.growth.growthId) : startRanchProduction(cell.slot.id)">
-                    <span>#{{ cell.index }}</span>
+                    <span class="slot-top"><i>#{{ cell.index }}</i><b>{{ slotStatusText(cell) }}</b></span>
                     <strong>{{ !cell.unlocked ? '未扩建' : cell.growth ? cell.growth.outputItemCode : '空闲' }}</strong>
-                    <small>{{ cell.growth ? (isReady(cell.growth) ? '可收获' : formatDate(cell.growth.readyAt)) : '点击养殖' }}</small>
+                    <small>{{ slotActionText(cell, 'Raise') }}</small>
                   </button>
                 </div>
               </article>
@@ -737,7 +753,7 @@ const GamePlayerWorkspace = defineComponent({
         </div>
 
         <nav class="game-bottom-tabs">
-          <button v-for="item in navItems" :key="item.id" type="button" :class="{ active: activeTab === item.id }" @click="activeTab = item.id">{{ item.label }}</button>
+          <button v-for="item in navItems" :key="item.id" type="button" :class="{ active: activeTab === item.id }" @click="activeTab = item.id"><span>{{ tabIcon(item.id) }}</span>{{ item.label }}</button>
           <button class="main-tab" type="button" @click="showFloat('profile')">+</button>
         </nav>
       </section>
@@ -758,6 +774,7 @@ const GamePlayerWorkspace = defineComponent({
               <label>设置交易密码<input v-model="playerForms.tradePassword" type="password" maxlength="6" placeholder="6 位数字" /></label>
               <button class="button" type="submit" :disabled="player.loading">保存</button>
             </form>
+            <div class="float-tip">交易密码只在交易相关操作中使用，未设置时禁止购买、出售和私下交易。</div>
           </template>
           <template v-else-if="activeFloat === 'item'">
             <span class="section-kicker">Item Info</span>
@@ -769,6 +786,7 @@ const GamePlayerWorkspace = defineComponent({
               <StatCard label="可用数量" :value="selectedInfo?.availableQuantity ?? '-'" />
               <StatCard label="成长时间" :value="formatDuration(selectedInfo?.growSeconds)" />
             </div>
+            <div class="float-tip">物品卡用于承载价格、成长、库存和用途信息，后续可以接入作物贴图和市场波动提示。</div>
           </template>
           <template v-else>
             <span class="section-kicker">Trade Confirm</span>
@@ -780,6 +798,7 @@ const GamePlayerWorkspace = defineComponent({
               <StatCard label="交易站预估税" :value="formatMoney(marketTaxEstimate)" />
               <StatCard label="私下预估税" :value="formatMoney(privateTaxEstimate)" />
             </div>
+            <div class="float-tip">交易确认层只做二次确认和风险提示，真正成交仍由后端校验余额、库存、交易密码和大宗令牌。</div>
           </template>
         </article>
       </div>
