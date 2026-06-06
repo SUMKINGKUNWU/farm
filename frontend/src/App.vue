@@ -44,6 +44,8 @@ import * as echarts from 'echarts'
 import { useAdminStore } from './stores/adminStore'
 import { usePlayerStore } from './stores/playerStore'
 import GamePlayerWorkspace from './components/GamePlayerWorkspace.vue'
+import NoticeBlock from './components/common/NoticeBlock.vue'
+import StatCard from './components/common/StatCard.vue'
 
 const activeMode = ref('player')
 const admin = useAdminStore()
@@ -207,40 +209,6 @@ function syncTaxForm(configs) {
     }
   })
 }
-
-const NoticeBlock = defineComponent({
-  props: {
-    message: { type: String, default: '' },
-    error: { type: String, default: '' },
-    detail: { type: Object, default: null }
-  },
-  template: `
-    <div>
-      <div v-if="message" class="notice success">{{ message }}</div>
-      <div v-if="error" class="notice error">
-        <div class="notice-title">
-          <span>{{ error }}</span>
-          <code v-if="detail?.code">{{ detail.code }}</code>
-        </div>
-        <p v-if="detail?.action">{{ detail.action }}</p>
-        <p v-if="detail?.status || detail?.path" class="notice-meta">HTTP {{ detail.status || '-' }} 路 {{ detail.path || '鏈湴鏍￠獙' }}</p>
-        <ul v-if="detail?.fieldErrors?.length" class="field-errors">
-          <li v-for="fieldError in detail.fieldErrors" :key="\`\${fieldError.field}-\${fieldError.message}\`">
-            {{ fieldError.field }}锛歿{ fieldError.message }}
-          </li>
-        </ul>
-      </div>
-    </div>
-  `
-})
-
-const StatCard = defineComponent({
-  props: {
-    label: { type: String, required: true },
-    value: { type: [String, Number], required: true }
-  },
-  template: '<article class="stat-card"><span>{{ label }}</span><strong>{{ value }}</strong></article>'
-})
 
 const PlayerIdentity = defineComponent({
   components: { NoticeBlock },
