@@ -5,7 +5,7 @@
         <span class="section-kicker">Tax Config</span>
         <h3>税率配置</h3>
       </div>
-      <button class="button ghost" type="button" :disabled="admin.loading" @click="admin.loadTaxConfigs">
+      <button class="button ghost" type="button" :disabled="loading" @click="emit('load-tax-configs')">
         读取税率
       </button>
     </div>
@@ -23,7 +23,7 @@
           调整原因
           <input v-model.trim="taxForm[type.code].reason" placeholder="例如：活动期降低交易站税率" />
         </label>
-        <button class="button" type="button" :disabled="admin.loading" @click="saveTax(type.code)">
+        <button class="button" type="button" :disabled="loading" @click="emit('save-tax', type.code)">
           保存 {{ type.name }}
         </button>
       </article>
@@ -32,14 +32,12 @@
 </template>
 
 <script setup>
-import { useAdminStore } from '../../stores/adminStore'
-
 defineProps({
   adminTaxTypes: { type: Array, required: true },
   taxForm: { type: Object, required: true },
-  formatRate: { type: Function, required: true },
-  saveTax: { type: Function, required: true }
+  loading: { type: Boolean, required: true },
+  formatRate: { type: Function, required: true }
 })
 
-const admin = useAdminStore()
+const emit = defineEmits(['load-tax-configs', 'save-tax'])
 </script>

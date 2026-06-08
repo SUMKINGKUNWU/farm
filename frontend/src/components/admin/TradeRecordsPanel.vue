@@ -5,7 +5,7 @@
         <span class="section-kicker">Trade Records</span>
         <h3>交易记录</h3>
       </div>
-      <button class="button ghost" type="button" :disabled="admin.loading" @click="admin.loadTrades">
+      <button class="button ghost" type="button" :disabled="loading" @click="emit('load-trades')">
         读取交易
       </button>
     </div>
@@ -16,7 +16,7 @@
           <tr><th>来源</th><th>方向</th><th>商品</th><th>数量</th><th>金额</th><th>税费</th><th>状态</th></tr>
         </thead>
         <tbody>
-          <tr v-for="trade in admin.trades" :key="trade.tradeId">
+          <tr v-for="trade in trades" :key="trade.tradeId">
             <td>{{ trade.tradeSource }}</td>
             <td>{{ trade.side }}</td>
             <td>{{ trade.itemCode }}</td>
@@ -25,7 +25,7 @@
             <td>{{ formatMoney(trade.taxAmount) }}</td>
             <td>{{ trade.status }}</td>
           </tr>
-          <tr v-if="!admin.trades.length"><td colspan="7">暂无交易记录</td></tr>
+          <tr v-if="!trades.length"><td colspan="7">暂无交易记录</td></tr>
         </tbody>
       </table>
     </div>
@@ -34,13 +34,14 @@
 
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useAdminStore } from '../../stores/adminStore'
 
-defineProps({
+const props = defineProps({
+  trades: { type: Array, required: true },
+  loading: { type: Boolean, required: true },
   formatMoney: { type: Function, required: true }
 })
 
-const admin = useAdminStore()
+const emit = defineEmits(['load-trades'])
 const chartEl = ref(null)
 let chart
 let echartsModulePromise
@@ -56,7 +57,7 @@ async function renderChart() {
   if (!chartEl.value) return
   const echarts = await loadEcharts()
   if (!chart) chart = echarts.init(chartEl.value)
-  const rows = admin.trades.slice().reverse()
+  const rows = props.trades.slice().reverse()
   chart.setOption({
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis' },
@@ -91,7 +92,7 @@ async function renderChart() {
   })
 }
 
-watch(() => admin.trades, () => nextTick(renderChart), { deep: true })
+watch(() => props.trades, () => nextTick(renderChart), { deep: true })
 
 onMounted(() => {
   renderChart()

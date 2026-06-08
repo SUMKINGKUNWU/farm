@@ -18,16 +18,30 @@
     <TaxConfigPanel
       :admin-tax-types="adminTaxTypes"
       :tax-form="taxForm"
+      :loading="admin.loading"
       :format-rate="formatRate"
-      :save-tax="saveTax"
+      @load-tax-configs="admin.loadTaxConfigs"
+      @save-tax="saveTax"
     />
     <BulkTokenPanel
       :token-form="tokenForm"
+      :issued-token="admin.issuedToken"
+      :loading="admin.loading"
       :format-date="formatDate"
-      :issue-token="issueToken"
+      @issue-token="issueToken"
     />
-    <PlayerAssetsPanel :format-money="formatMoney" />
-    <TradeRecordsPanel :format-money="formatMoney" />
+    <PlayerAssetsPanel
+      :assets="admin.assets"
+      :loading="admin.loading"
+      :format-money="formatMoney"
+      @load-assets="admin.loadAssets"
+    />
+    <TradeRecordsPanel
+      :trades="admin.trades"
+      :loading="admin.loading"
+      :format-money="formatMoney"
+      @load-trades="admin.loadTrades"
+    />
   </div>
 </template>
 
