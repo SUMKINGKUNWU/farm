@@ -552,6 +552,65 @@ class FarmExchangeApplicationTests {
     }
 
     @Test
+    void concurrentMarketBuyOnlyDebitsAffordableTradeOnce() throws Exception {
+        String userId = registerTestUser();
+        setTradePassword(userId);
+        resetMarketTaxRate();
+        jdbcTemplate.update("update items set current_price = base_price where code = 'WHEAT'");
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> first = executor.submit(() -> marketBuyStatus(userId, ready, start));
+            Future<Integer> second = executor.submit(() -> marketBuyStatus(userId, ready, start));
+
+            Assertions.assertTrue(ready.await(5, TimeUnit.SECONDS));
+            start.countDown();
+
+            int firstStatus = first.get(10, TimeUnit.SECONDS);
+            int secondStatus = second.get(10, TimeUnit.SECONDS);
+
+            Assertions.assertEquals(1, successCount(firstStatus, secondStatus));
+            Assertions.assertEquals(1, conflictCount(firstStatus, secondStatus));
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Long balance = jdbcTemplate.queryForObject(
+                "select balance from wallets where user_id = ?::uuid",
+                Long.class,
+                userId
+        );
+        Long wheatQuantity = jdbcTemplate.queryForObject(
+                "select pi.available_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                userId
+        );
+        Integer tradeCount = jdbcTemplate.queryForObject(
+                "select count(*) from market_trades where user_id = ?::uuid and side = 'BUY'",
+                Integer.class,
+                userId
+        );
+        Integer taxCount = jdbcTemplate.queryForObject(
+                "select count(*) from tax_records where payer_user_id = ?::uuid and trade_type = 'MARKET'",
+                Integer.class,
+                userId
+        );
+        Integer ledgerCount = jdbcTemplate.queryForObject(
+                "select count(*) from asset_ledger where user_id = ?::uuid and reason = 'MARKET_BUY'",
+                Integer.class,
+                userId
+        );
+
+        Assertions.assertEquals(4850L, balance);
+        Assertions.assertEquals(200L, wheatQuantity);
+        Assertions.assertEquals(1, tradeCount);
+        Assertions.assertEquals(1, taxCount);
+        Assertions.assertEquals(2, ledgerCount);
+    }
+
+    @Test
     void bulkMarketTradeRequiresTokenAndConsumesIt() throws Exception {
         String userId = registerTestUser();
         setTradePassword(userId);
@@ -985,6 +1044,17 @@ class FarmExchangeApplicationTests {
         return mockMvc.perform(post("/api/users/" + userId + "/market/sell")
                         .contentType("application/json")
                         .content("{\"itemCode\":\"WHEAT\",\"quantity\":10,\"tradePassword\":\"654321\"}"))
+                .andReturn()
+                .getResponse()
+                .getStatus();
+    }
+
+    private int marketBuyStatus(String userId, CountDownLatch ready, CountDownLatch start) throws Exception {
+        ready.countDown();
+        Assertions.assertTrue(start.await(5, TimeUnit.SECONDS));
+        return mockMvc.perform(post("/api/users/" + userId + "/market/buy")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":200,\"tradePassword\":\"654321\"}"))
                 .andReturn()
                 .getResponse()
                 .getStatus();
