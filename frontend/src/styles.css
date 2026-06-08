@@ -50,6 +50,22 @@ select {
   font: inherit;
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 3px solid #f5ce71;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(49, 75, 47, .28);
+}
+
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .shell {
   width: min(1500px, calc(100vw - 36px));
   min-height: calc(100vh - 36px);
@@ -1370,5 +1386,21 @@ td small {
     width: calc(100% - 32px);
     overflow-x: auto;
     justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .nav a:hover,
+  .game-slot:hover:not(:disabled) {
+    transform: none;
   }
 }

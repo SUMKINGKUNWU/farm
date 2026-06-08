@@ -200,7 +200,7 @@
 
     <div v-if="activeFloat" class="float-layer" @click.self="closeFloat">
       <article class="glass-pop">
-        <button class="close-pop" type="button" @click="closeFloat">×</button>
+        <button ref="closeButtonRef" class="close-pop" type="button" @click="closeFloat">×</button>
         <template v-if="activeFloat === 'profile'">
           <span class="section-kicker">Profile</span>
           <h3>{{ player.currentUser?.nickname || player.currentUser?.username || '农场主' }}</h3>
@@ -246,7 +246,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import NoticeBlock from './common/NoticeBlock.vue'
 import StatCard from './common/StatCard.vue'
 import { usePlayerStore } from '../stores/playerStore'
@@ -256,6 +256,7 @@ const player = usePlayerStore()
 const activeTab = ref('farm')
 const activeFloat = ref('')
 const selectedInfo = ref(null)
+const closeButtonRef = ref(null)
 
 const forms = reactive({
   tradePassword: '',
@@ -355,6 +356,24 @@ function closeFloat() {
   activeFloat.value = ''
   selectedInfo.value = null
 }
+
+function handleKeydown(event) {
+  if (event.key === 'Escape' && activeFloat.value) {
+    closeFloat()
+  }
+}
+
+watch(activeFloat, (value) => {
+  if (value) {
+    nextTick(() => closeButtonRef.value?.focus())
+  }
+})
+
+window.addEventListener('keydown', handleKeydown)
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 
 async function purchaseShopItem() {
   await player.purchase({
