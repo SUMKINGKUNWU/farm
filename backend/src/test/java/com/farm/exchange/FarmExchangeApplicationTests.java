@@ -6,6 +6,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -659,6 +664,74 @@ class FarmExchangeApplicationTests {
     }
 
     @Test
+    void concurrentPrivateTradeAcceptOnlySettlesOnce() throws Exception {
+        String sellerId = registerTestUser();
+        String buyerId = registerTestUser();
+        setTradePassword(sellerId);
+        setTradePassword(buyerId);
+        grantInventory(sellerId, "WHEAT", 50);
+
+        MvcResult offerResult = mockMvc.perform(post("/api/users/" + sellerId + "/private-trades")
+                        .contentType("application/json")
+                        .content("{\"buyerUserId\":\"" + buyerId + "\",\"itemCode\":\"WHEAT\",\"quantity\":20,\"priceAmount\":1000,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("WAIT_ACCEPT"))
+                .andReturn();
+        String offerId = extractJsonString(offerResult.getResponse().getContentAsString(), "offerId");
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> first = executor.submit(() -> acceptOfferStatus(buyerId, offerId, ready, start));
+            Future<Integer> second = executor.submit(() -> acceptOfferStatus(buyerId, offerId, ready, start));
+
+            Assertions.assertTrue(ready.await(5, TimeUnit.SECONDS));
+            start.countDown();
+
+            int firstStatus = first.get(10, TimeUnit.SECONDS);
+            int secondStatus = second.get(10, TimeUnit.SECONDS);
+
+            Assertions.assertEquals(1, successCount(firstStatus, secondStatus));
+            Assertions.assertEquals(1, conflictCount(firstStatus, secondStatus));
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Integer completedCount = jdbcTemplate.queryForObject(
+                "select count(*) from private_trade_offers where id = ?::uuid and status = 'COMPLETED'",
+                Integer.class,
+                offerId
+        );
+        Integer taxCount = jdbcTemplate.queryForObject(
+                "select count(*) from tax_records where ref_id = ?::uuid and trade_type = 'PRIVATE'",
+                Integer.class,
+                offerId
+        );
+        Long sellerAvailable = jdbcTemplate.queryForObject(
+                "select pi.available_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                sellerId
+        );
+        Long sellerLocked = jdbcTemplate.queryForObject(
+                "select pi.locked_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                sellerId
+        );
+        Long buyerAvailable = jdbcTemplate.queryForObject(
+                "select pi.available_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                buyerId
+        );
+
+        Assertions.assertEquals(1, completedCount);
+        Assertions.assertEquals(1, taxCount);
+        Assertions.assertEquals(30L, sellerAvailable);
+        Assertions.assertEquals(0L, sellerLocked);
+        Assertions.assertEquals(20L, buyerAvailable);
+    }
+
+    @Test
     void bulkPrivateTradeRequiresBuyerTokenOnAccept() throws Exception {
         String sellerId = registerTestUser();
         String buyerId = registerTestUser();
@@ -833,6 +906,25 @@ class FarmExchangeApplicationTests {
                 quantity,
                 itemCode
         );
+    }
+
+    private int acceptOfferStatus(String buyerId, String offerId, CountDownLatch ready, CountDownLatch start) throws Exception {
+        ready.countDown();
+        Assertions.assertTrue(start.await(5, TimeUnit.SECONDS));
+        return mockMvc.perform(post("/api/users/" + buyerId + "/private-trades/" + offerId + "/accept")
+                        .contentType("application/json")
+                        .content("{\"tradePassword\":\"654321\"}"))
+                .andReturn()
+                .getResponse()
+                .getStatus();
+    }
+
+    private int successCount(int firstStatus, int secondStatus) {
+        return (firstStatus == 200 ? 1 : 0) + (secondStatus == 200 ? 1 : 0);
+    }
+
+    private int conflictCount(int firstStatus, int secondStatus) {
+        return (firstStatus == 409 ? 1 : 0) + (secondStatus == 409 ? 1 : 0);
     }
 
     private void makeAdmin(String userId) {
