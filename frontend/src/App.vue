@@ -14,8 +14,8 @@
         <button :class="{ active: activeMode === 'admin' }" type="button" @click="activeMode = 'admin'">管理台</button>
       </div>
 
-      <PlayerIdentity v-if="activeMode === 'player'" />
-      <AdminIdentity v-else />
+      <PlayerIdentity v-if="activeMode === 'player'" :player="player" />
+      <AdminIdentity v-else :admin="admin" @refresh-console="loadAdminEverything" />
 
       <nav class="nav" v-if="activeMode === 'player'">
         <a href="#player-overview">概览</a>
@@ -50,11 +50,13 @@
 </template>
 
 <script setup>
-import { defineComponent, onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { useAdminStore } from './stores/adminStore'
 import { usePlayerStore } from './stores/playerStore'
 import GamePlayerWorkspace from './components/GamePlayerWorkspace.vue'
 import AdminWorkspace from './components/AdminWorkspace.vue'
+import PlayerIdentity from './components/identity/PlayerIdentity.vue'
+import AdminIdentity from './components/identity/AdminIdentity.vue'
 
 const activeMode = ref('player')
 const admin = useAdminStore()
@@ -118,57 +120,6 @@ function syncTaxForm(configs) {
     }
   })
 }
-
-const PlayerIdentity = defineComponent({
-  setup() {
-    return { player }
-  },
-  template: `
-    <div class="identity-card">
-      <template v-if="!player.isLoggedIn">
-        <label>玩家用户名<input v-model.trim="player.username" placeholder="例如 farmer_001" /></label>
-        <label>玩家昵称<input v-model.trim="player.nickname" placeholder="注册时填写昵称" /></label>
-        <label>登录密码<input v-model="player.password" type="password" placeholder="至少 6 位" @keydown.enter="player.login" /></label>
-        <div class="button-row">
-          <button class="button ghost" type="button" :disabled="player.loading" @click="player.login">登录</button>
-          <button class="button subtle" type="button" :disabled="player.loading" @click="player.register">注册并登录</button>
-        </div>
-      </template>
-      <template v-else>
-        <div class="login-badge">
-          <span>当前玩家</span>
-          <strong>{{ player.currentUser?.username || player.username || '已登录' }}</strong>
-        </div>
-        <button class="button ghost" type="button" :disabled="player.loading" @click="player.loadDashboard">刷新农场</button>
-        <button class="button subtle" type="button" @click="player.logout">退出登录</button>
-      </template>
-    </div>
-  `
-})
-
-const AdminIdentity = defineComponent({
-  setup() {
-    return { admin, loadAdminEverything }
-  },
-  template: `
-    <div class="identity-card">
-      <template v-if="!admin.isLoggedIn">
-        <label>管理员用户名<input v-model.trim="admin.username" placeholder="请输入管理员用户名" /></label>
-        <label>登录密码<input v-model="admin.password" type="password" placeholder="请输入登录密码" @keydown.enter="admin.login" /></label>
-        <button class="button ghost" type="button" :disabled="admin.loading" @click="admin.login">登录管理台</button>
-      </template>
-      <template v-else>
-        <div class="login-badge">
-          <span>当前管理员</span>
-          <strong>{{ admin.currentUser?.username || admin.username || '已登录' }}</strong>
-        </div>
-        <label>目标玩家用户 ID<input v-model.trim="admin.targetUserId" placeholder="要查询或发令牌的玩家 UUID" /></label>
-        <button class="button ghost" type="button" :disabled="admin.loading" @click="loadAdminEverything">刷新控制台</button>
-        <button class="button subtle" type="button" @click="admin.logout">退出登录</button>
-      </template>
-    </div>
-  `
-})
 
 watch(() => admin.taxConfigs, syncTaxForm, { deep: true })
 
