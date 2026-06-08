@@ -14,8 +14,27 @@
         <button :class="{ active: activeMode === 'admin' }" type="button" @click="activeMode = 'admin'">管理台</button>
       </div>
 
-      <PlayerIdentity v-if="activeMode === 'player'" :player="player" />
-      <AdminIdentity v-else :admin="admin" @refresh-console="loadAdminEverything" />
+      <PlayerIdentity
+        v-if="activeMode === 'player'"
+        :identity-form="player"
+        :is-logged-in="player.isLoggedIn"
+        :current-user="player.currentUser"
+        :loading="player.loading"
+        @login="player.login"
+        @register="player.register"
+        @refresh-dashboard="player.loadDashboard"
+        @logout="player.logout"
+      />
+      <AdminIdentity
+        v-else
+        :identity-form="admin"
+        :is-logged-in="admin.isLoggedIn"
+        :current-user="admin.currentUser"
+        :loading="admin.loading"
+        @login="admin.login"
+        @refresh-console="loadAdminEverything"
+        @logout="admin.logout"
+      />
 
       <nav class="nav" v-if="activeMode === 'player'">
         <a href="#player-overview">概览</a>
