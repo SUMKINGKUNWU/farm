@@ -3,6 +3,7 @@ export const errorCodeMessages = {
   AUTH_INVALID: '登录凭证无效，请重新登录。',
   AUTH_EXPIRED: '登录已过期，请重新登录。',
   AUTH_FAILED: '用户名或密码错误。',
+  ADMIN_REQUIRED: '该账号不是管理员。',
   PERMISSION_DENIED: '当前账号没有执行该操作的权限。',
   USER_NOT_FOUND: '用户不存在或状态不可用。',
   USER_INACTIVE: '用户状态不可用。',
@@ -24,6 +25,7 @@ export const errorCodeMessages = {
   CONFIG_MISSING: '系统配置缺失，请联系管理员。',
   INVALID_OPERATION: '当前操作不被支持。',
   VALIDATION_ERROR: '请检查表单填写内容。',
+  TARGET_USER_REQUIRED: '请先填写目标玩家用户 ID。',
   MISSING_PARAMETER: '请求参数缺失。',
   TYPE_MISMATCH: '参数格式不正确。',
   BAD_REQUEST: '请求内容格式不正确。',
@@ -38,6 +40,7 @@ export const errorCodeActions = {
   AUTH_INVALID: '退出登录并重新获取 token。',
   AUTH_EXPIRED: '退出登录并重新获取 token。',
   PERMISSION_DENIED: '确认当前账号是否已经被设置为 ADMIN。',
+  ADMIN_REQUIRED: '请切换为管理员账号后重新登录管理台。',
   TRADE_PASSWORD_REQUIRED: '玩家侧先完成交易密码设置。',
   TRADE_PASSWORD_LOCKED: '等待锁定时间结束后再尝试。',
   INSUFFICIENT_BALANCE: '降低交易数量或先补充金币。',
@@ -49,7 +52,8 @@ export const errorCodeActions = {
   ITEM_NOT_TRADABLE: '检查商品类型、状态和 trade_enabled 配置。',
   STATE_CONFLICT: '刷新当前数据后重新提交。',
   CONFIG_MISSING: '检查税率、扩建或商品生产配置。',
-  VALIDATION_ERROR: '根据字段提示修正后重新提交。'
+  VALIDATION_ERROR: '根据字段提示修正后重新提交。',
+  TARGET_USER_REQUIRED: '在左侧身份卡填写目标玩家用户 ID 后再刷新资产、交易或发放令牌。'
 }
 
 export class ApiClientError extends Error {

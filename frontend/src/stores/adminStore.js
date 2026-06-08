@@ -49,7 +49,7 @@ export const useAdminStore = defineStore('admin', {
   actions: {
     authHeaders() {
       if (!this.accessToken) {
-        throw new Error('请先登录管理员账号')
+        throw new ApiClientError({ message: '请先登录管理员账号', code: 'AUTH_REQUIRED' })
       }
       return { Authorization: `Bearer ${this.accessToken}` }
     },
@@ -95,14 +95,14 @@ export const useAdminStore = defineStore('admin', {
     },
     targetId() {
       if (!this.targetUserId.trim()) {
-        throw new Error('请先填写目标玩家用户 ID')
+        throw new ApiClientError({ message: '请先填写目标玩家用户 ID', code: 'TARGET_USER_REQUIRED' })
       }
       return this.targetUserId.trim()
     },
     async login() {
       return this.run(async () => {
         if (!this.username.trim() || !this.password) {
-          throw new Error('请填写管理员用户名和密码')
+          throw new ApiClientError({ message: '请填写管理员用户名和密码', code: 'VALIDATION_ERROR' })
         }
         const result = await requestJson('/api/auth/login', {
           method: 'POST',
@@ -112,7 +112,7 @@ export const useAdminStore = defineStore('admin', {
           })
         })
         if (result.role !== 'ADMIN') {
-          throw new Error('该账号不是管理员')
+          throw new ApiClientError({ message: '该账号不是管理员', code: 'ADMIN_REQUIRED' })
         }
         this.currentUser = result
         this.accessToken = result.accessToken
