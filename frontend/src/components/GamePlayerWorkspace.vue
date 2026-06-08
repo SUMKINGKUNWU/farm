@@ -4,7 +4,10 @@
 
     <section class="game-shell">
       <GameTopbar
-        :player="player"
+        :current-user="player.currentUser"
+        :username="player.username"
+        :summary="player.summary"
+        :loading="player.loading"
         :ready-count="readyCount"
         :format-money="formatMoney"
         @open-float="showFloat"
@@ -14,7 +17,10 @@
       <div class="game-layout">
         <FarmRanchPanel
           :active-tab="activeTab"
-          :player="player"
+          :summary="player.summary"
+          :farm="player.farm"
+          :ranch="player.ranch"
+          :loading="player.loading"
           :forms="forms"
           :seed-options="seedOptions"
           :animal-options="animalOptions"
@@ -33,7 +39,9 @@
 
         <ShopPanel
           :active-tab="activeTab"
-          :player="player"
+          :summary="player.summary"
+          :inventory="player.inventory"
+          :loading="player.loading"
           :forms="forms"
           :all-shop-options="allShopOptions"
           @open-float="showFloat"
@@ -42,7 +50,9 @@
 
         <MarketPanel
           :active-tab="activeTab"
-          :player="player"
+          :summary="player.summary"
+          :quote="player.quote"
+          :loading="player.loading"
           :forms="forms"
           :harvest-options="harvestOptions"
           :current-market-item="currentMarketItem"
@@ -52,11 +62,21 @@
           @submit-market="submitMarket"
         />
 
-        <MarketSidebar :player="player" :forms="forms" :format-money="formatMoney" />
+        <MarketSidebar
+          :quote="player.quote"
+          :bulk-token-count="player.bulkTokens.length"
+          :loading="player.loading"
+          :forms="forms"
+          :format-money="formatMoney"
+          @refresh-quote="player.quote"
+        />
 
         <PrivateTradePanel
           :active-tab="activeTab"
-          :player="player"
+          :summary="player.summary"
+          :current-user="player.currentUser"
+          :private-trades="player.privateTrades"
+          :loading="player.loading"
           :forms="forms"
           :harvest-options="harvestOptions"
           :private-tax-estimate="privateTaxEstimate"
@@ -79,7 +99,10 @@
     <PlayerFloatLayer
       :active-float="activeFloat"
       :selected-info="selectedInfo"
-      :player="player"
+      :current-user="player.currentUser"
+      :summary="player.summary"
+      :bulk-token-count="player.bulkTokens.length"
+      :loading="player.loading"
       :forms="forms"
       :market-tax-estimate="marketTaxEstimate"
       :private-tax-estimate="privateTaxEstimate"

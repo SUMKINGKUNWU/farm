@@ -4,16 +4,16 @@
       <button ref="closeButtonRef" class="close-pop" type="button" @click="emit('close')">×</button>
       <template v-if="activeFloat === 'profile'">
         <span class="section-kicker">Profile</span>
-        <h3>{{ player.currentUser?.nickname || player.currentUser?.username || '农场主' }}</h3>
+        <h3>{{ currentUser?.nickname || currentUser?.username || '农场主' }}</h3>
         <div class="float-grid">
-          <StatCard label="可用金币" :value="formatMoney(player.summary?.balance)" />
-          <StatCard label="锁定金币" :value="formatMoney(player.summary?.lockedBalance)" />
-          <StatCard label="大宗令牌" :value="player.bulkTokens.length" />
-          <StatCard label="交易密码" :value="player.summary?.tradePasswordSet ? '已设置' : '未设置'" />
+          <StatCard label="可用金币" :value="formatMoney(summary?.balance)" />
+          <StatCard label="锁定金币" :value="formatMoney(summary?.lockedBalance)" />
+          <StatCard label="大宗令牌" :value="bulkTokenCount" />
+          <StatCard label="交易密码" :value="summary?.tradePasswordSet ? '已设置' : '未设置'" />
         </div>
         <form class="compact-form float-password" @submit.prevent="emit('save-trade-password', forms.tradePassword)">
           <label>设置交易密码<input v-model="forms.tradePassword" type="password" maxlength="6" placeholder="6 位数字" /></label>
-          <button class="button" type="submit" :disabled="player.loading">保存</button>
+          <button class="button" type="submit" :disabled="loading">保存</button>
         </form>
         <div class="float-tip">交易密码只在交易相关操作中使用，未设置时禁止购买、出售和私下交易。</div>
       </template>
@@ -52,7 +52,10 @@ import StatCard from '../common/StatCard.vue'
 const props = defineProps({
   activeFloat: { type: String, required: true },
   selectedInfo: { type: Object, default: null },
-  player: { type: Object, required: true },
+  currentUser: { type: Object, default: null },
+  summary: { type: Object, default: null },
+  bulkTokenCount: { type: Number, required: true },
+  loading: { type: Boolean, required: true },
   forms: { type: Object, required: true },
   marketTaxEstimate: { type: Number, required: true },
   privateTaxEstimate: { type: Number, required: true },
