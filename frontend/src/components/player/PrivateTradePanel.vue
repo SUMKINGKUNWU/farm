@@ -2,10 +2,10 @@
   <section v-show="activeTab === 'private'" class="farm-canvas private-canvas">
     <div class="canvas-heading">
       <div><span class="section-kicker">Private Trade</span><h2>私下交易</h2></div>
-      <button class="button ghost" type="button" @click="showFloat('trade')">交易确认浮层</button>
+      <button class="button ghost" type="button" @click="emit('open-float', 'trade')">交易确认浮层</button>
     </div>
     <div class="private-game-grid">
-      <form class="game-card-form" @submit.prevent="createPrivateTrade">
+      <form class="game-card-form" @submit.prevent="emit('create-private-trade')">
         <div v-if="!player.summary?.tradePasswordSet" class="requirement-hint">
           <strong>私下交易前置条件</strong>
           <span>私下交易需要双方都设置并输入自己的交易密码。</span>
@@ -34,7 +34,7 @@
             class="button mini"
             type="button"
             :disabled="player.loading"
-            @click="acceptPrivateTrade(offer.offerId)"
+            @click="emit('accept-private-trade', offer.offerId)"
           >
             接受
           </button>
@@ -43,7 +43,7 @@
             class="button ghost mini"
             type="button"
             :disabled="player.loading"
-            @click="player.cancelPrivateTrade(offer.offerId)"
+            @click="emit('cancel-private-trade', offer.offerId)"
           >
             取消
           </button>
@@ -64,9 +64,8 @@ defineProps({
   forms: { type: Object, required: true },
   harvestOptions: { type: Array, required: true },
   privateTaxEstimate: { type: Number, required: true },
-  formatMoney: { type: Function, required: true },
-  showFloat: { type: Function, required: true },
-  createPrivateTrade: { type: Function, required: true },
-  acceptPrivateTrade: { type: Function, required: true }
+  formatMoney: { type: Function, required: true }
 })
+
+const emit = defineEmits(['open-float', 'create-private-trade', 'accept-private-trade', 'cancel-private-trade'])
 </script>

@@ -1,6 +1,6 @@
 <template>
   <div class="game-topbar">
-    <button class="avatar-button" type="button" @click="showFloat('profile')">
+    <button class="avatar-button" type="button" @click="emit('open-float', 'profile')">
       <span class="avatar-seed">穗</span>
       <span>
         <b>{{ player.currentUser?.nickname || player.currentUser?.username || player.username || '农场主' }}</b>
@@ -15,7 +15,7 @@
       <span>可收获</span>
       <strong>{{ readyCount }}</strong>
     </div>
-    <button class="round-action" type="button" :disabled="player.loading" @click="player.loadDashboard">刷新</button>
+    <button class="round-action" type="button" :disabled="player.loading" @click="emit('refresh')">刷新</button>
   </div>
 </template>
 
@@ -23,7 +23,8 @@
 defineProps({
   player: { type: Object, required: true },
   readyCount: { type: Number, required: true },
-  formatMoney: { type: Function, required: true },
-  showFloat: { type: Function, required: true }
+  formatMoney: { type: Function, required: true }
 })
+
+const emit = defineEmits(['open-float', 'refresh'])
 </script>

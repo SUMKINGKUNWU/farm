@@ -2,10 +2,10 @@
   <section v-show="activeTab === 'market'" class="farm-canvas market-canvas">
     <div class="canvas-heading">
       <div><span class="section-kicker">Market</span><h2>交易站买卖</h2></div>
-      <button class="button ghost" type="button" @click="showFloat('trade')">交易确认浮层</button>
+      <button class="button ghost" type="button" @click="emit('open-float', 'trade')">交易确认浮层</button>
     </div>
     <div class="market-game-grid">
-      <form class="game-card-form" @submit.prevent="submitMarket('BUY')">
+      <form class="game-card-form" @submit.prevent="emit('submit-market', 'BUY')">
         <div v-if="!player.summary?.tradePasswordSet" class="requirement-hint">
           <strong>交易密码未设置</strong>
           <span>交易站买入和卖出都需要交易密码，系统会在后端再次校验。</span>
@@ -21,7 +21,7 @@
         <label>大宗令牌<input v-model.trim="forms.marketBulkTokenCode" placeholder="非大宗可留空" /></label>
         <div class="fee-preview"><span>交易站税费 3%</span><strong>{{ formatMoney(marketTaxEstimate) }}</strong></div>
         <button class="button" type="submit" :disabled="player.loading">买入</button>
-        <button class="button ghost" type="button" :disabled="player.loading" @click="submitMarket('SELL')">卖出</button>
+        <button class="button ghost" type="button" :disabled="player.loading" @click="emit('submit-market', 'SELL')">卖出</button>
       </form>
       <article class="trade-explain-card">
         <span class="section-kicker">Price Rule</span>
@@ -42,8 +42,8 @@ defineProps({
   harvestOptions: { type: Array, required: true },
   currentMarketItem: { type: Object, default: null },
   marketTaxEstimate: { type: Number, required: true },
-  formatMoney: { type: Function, required: true },
-  showFloat: { type: Function, required: true },
-  submitMarket: { type: Function, required: true }
+  formatMoney: { type: Function, required: true }
 })
+
+const emit = defineEmits(['open-float', 'submit-market'])
 </script>

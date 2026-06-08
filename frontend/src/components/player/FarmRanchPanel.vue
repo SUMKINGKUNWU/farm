@@ -6,10 +6,10 @@
         <h2>农田与牧场</h2>
       </div>
       <div class="expand-actions">
-        <button class="button ghost" type="button" :disabled="player.loading" @click="player.expand('FARM')">
+        <button class="button ghost" type="button" :disabled="player.loading" @click="emit('expand', 'FARM')">
           扩建农田 {{ formatMoney(player.summary?.nextFarmExpandCost) }}
         </button>
-        <button class="button ghost" type="button" :disabled="player.loading" @click="player.expand('RANCH')">
+        <button class="button ghost" type="button" :disabled="player.loading" @click="emit('expand', 'RANCH')">
           扩建牧场 {{ formatMoney(player.summary?.nextRanchExpandCost) }}
         </button>
       </div>
@@ -32,7 +32,7 @@
           </option>
         </select>
       </label>
-      <button class="button subtle-light" type="button" @click="showFloat('item', currentMarketItem)">物品信息</button>
+      <button class="button subtle-light" type="button" @click="emit('open-float', 'item', currentMarketItem)">物品信息</button>
     </div>
 
     <div class="game-field-board">
@@ -46,7 +46,7 @@
             :class="{ locked: !cell.unlocked, busy: cell.growth, ready: isReady(cell.growth) }"
             type="button"
             :disabled="player.loading || !cell.unlocked"
-            @click="cell.growth ? harvestGrowth(cell.growth.growthId) : startFarmProduction(cell.slot.id)"
+            @click="cell.growth ? emit('harvest', cell.growth.growthId) : emit('start-production', { type: 'FARM', slotId: cell.slot.id })"
           >
             <span class="slot-top"><i>#{{ cell.index }}</i><b>{{ slotStatusText(cell) }}</b></span>
             <strong>{{ !cell.unlocked ? '未扩建' : cell.growth ? cell.growth.outputItemCode : '空闲' }}</strong>
@@ -64,7 +64,7 @@
             :class="{ locked: !cell.unlocked, busy: cell.growth, ready: isReady(cell.growth) }"
             type="button"
             :disabled="player.loading || !cell.unlocked"
-            @click="cell.growth ? harvestGrowth(cell.growth.growthId) : startRanchProduction(cell.slot.id)"
+            @click="cell.growth ? emit('harvest', cell.growth.growthId) : emit('start-production', { type: 'RANCH', slotId: cell.slot.id })"
           >
             <span class="slot-top"><i>#{{ cell.index }}</i><b>{{ slotStatusText(cell) }}</b></span>
             <strong>{{ !cell.unlocked ? '未扩建' : cell.growth ? cell.growth.outputItemCode : '空闲' }}</strong>
@@ -89,10 +89,8 @@ defineProps({
   slotCells: { type: Function, required: true },
   isReady: { type: Function, required: true },
   slotStatusText: { type: Function, required: true },
-  slotActionText: { type: Function, required: true },
-  showFloat: { type: Function, required: true },
-  startFarmProduction: { type: Function, required: true },
-  startRanchProduction: { type: Function, required: true },
-  harvestGrowth: { type: Function, required: true }
+  slotActionText: { type: Function, required: true }
 })
+
+const emit = defineEmits(['expand', 'open-float', 'start-production', 'harvest'])
 </script>

@@ -7,7 +7,8 @@
         :player="player"
         :ready-count="readyCount"
         :format-money="formatMoney"
-        :show-float="showFloat"
+        @open-float="showFloat"
+        @refresh="player.loadDashboard"
       />
 
       <div class="game-layout">
@@ -24,10 +25,10 @@
           :is-ready="isReady"
           :slot-status-text="slotStatusText"
           :slot-action-text="slotActionText"
-          :show-float="showFloat"
-          :start-farm-production="startFarmProduction"
-          :start-ranch-production="startRanchProduction"
-          :harvest-growth="harvestGrowth"
+          @expand="player.expand"
+          @open-float="showFloat"
+          @start-production="startProduction"
+          @harvest="harvestGrowth"
         />
 
         <ShopPanel
@@ -35,8 +36,8 @@
           :player="player"
           :forms="forms"
           :all-shop-options="allShopOptions"
-          :show-float="showFloat"
-          :purchase-shop-item="purchaseShopItem"
+          @open-float="showFloat"
+          @purchase="purchaseShopItem"
         />
 
         <MarketPanel
@@ -47,8 +48,8 @@
           :current-market-item="currentMarketItem"
           :market-tax-estimate="marketTaxEstimate"
           :format-money="formatMoney"
-          :show-float="showFloat"
-          :submit-market="submitMarket"
+          @open-float="showFloat"
+          @submit-market="submitMarket"
         />
 
         <MarketSidebar :player="player" :forms="forms" :format-money="formatMoney" />
@@ -60,17 +61,18 @@
           :harvest-options="harvestOptions"
           :private-tax-estimate="privateTaxEstimate"
           :format-money="formatMoney"
-          :show-float="showFloat"
-          :create-private-trade="createPrivateTrade"
-          :accept-private-trade="acceptPrivateTrade"
+          @open-float="showFloat"
+          @create-private-trade="createPrivateTrade"
+          @accept-private-trade="acceptPrivateTrade"
+          @cancel-private-trade="player.cancelPrivateTrade"
         />
       </div>
 
       <GameBottomTabs
         :active-tab="activeTab"
         :nav-items="navItems"
-        :set-active-tab="setActiveTab"
-        :show-float="showFloat"
+        @change-tab="setActiveTab"
+        @open-float="showFloat"
       />
     </section>
 
@@ -83,7 +85,8 @@
       :private-tax-estimate="privateTaxEstimate"
       :format-money="formatMoney"
       :format-duration="formatDuration"
-      :close-float="closeFloat"
+      @close="closeFloat"
+      @save-trade-password="player.setTradePassword"
     />
   </div>
 </template>
@@ -230,12 +233,9 @@ async function purchaseShopItem() {
   })
 }
 
-async function startFarmProduction(slotId) {
-  await player.startProduction('FARM', slotId, forms.farmItemCode)
-}
-
-async function startRanchProduction(slotId) {
-  await player.startProduction('RANCH', slotId, forms.ranchItemCode)
+async function startProduction(payload) {
+  const itemCode = payload.type === 'FARM' ? forms.farmItemCode : forms.ranchItemCode
+  await player.startProduction(payload.type, payload.slotId, itemCode)
 }
 
 async function harvestGrowth(growthId) {

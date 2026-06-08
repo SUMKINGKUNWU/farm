@@ -1,7 +1,7 @@
 <template>
-  <div v-if="activeFloat" class="float-layer" @click.self="closeFloat">
+  <div v-if="activeFloat" class="float-layer" @click.self="emit('close')">
     <article class="glass-pop">
-      <button ref="closeButtonRef" class="close-pop" type="button" @click="closeFloat">×</button>
+      <button ref="closeButtonRef" class="close-pop" type="button" @click="emit('close')">×</button>
       <template v-if="activeFloat === 'profile'">
         <span class="section-kicker">Profile</span>
         <h3>{{ player.currentUser?.nickname || player.currentUser?.username || '农场主' }}</h3>
@@ -11,7 +11,7 @@
           <StatCard label="大宗令牌" :value="player.bulkTokens.length" />
           <StatCard label="交易密码" :value="player.summary?.tradePasswordSet ? '已设置' : '未设置'" />
         </div>
-        <form class="compact-form float-password" @submit.prevent="player.setTradePassword(forms.tradePassword)">
+        <form class="compact-form float-password" @submit.prevent="emit('save-trade-password', forms.tradePassword)">
           <label>设置交易密码<input v-model="forms.tradePassword" type="password" maxlength="6" placeholder="6 位数字" /></label>
           <button class="button" type="submit" :disabled="player.loading">保存</button>
         </form>
@@ -57,11 +57,11 @@ const props = defineProps({
   marketTaxEstimate: { type: Number, required: true },
   privateTaxEstimate: { type: Number, required: true },
   formatMoney: { type: Function, required: true },
-  formatDuration: { type: Function, required: true },
-  closeFloat: { type: Function, required: true }
+  formatDuration: { type: Function, required: true }
 })
 
 const closeButtonRef = ref(null)
+const emit = defineEmits(['close', 'save-trade-password'])
 
 watch(() => props.activeFloat, (value) => {
   if (value) {
