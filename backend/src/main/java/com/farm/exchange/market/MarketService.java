@@ -122,7 +122,7 @@ public class MarketService {
 
     private MarketItem marketItem(String itemCode) {
         return jdbcTemplate.query(
-                "select id, code, item_type, base_price, current_price, bulk_quantity_threshold, bulk_amount_threshold, trade_enabled from items where code = ? and status = 'ACTIVE'",
+                "select id, code, item_type, base_price, current_price, bulk_quantity_threshold, bulk_amount_threshold, trade_enabled from items where code = ? and status = 'ACTIVE' for update",
                 rs -> {
                     if (!rs.next()) {
                         throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.ITEM_NOT_FOUND, "交易商品不存在或不可用");
@@ -317,4 +317,5 @@ public class MarketService {
             this.version = version;
         }
     }
+
 }

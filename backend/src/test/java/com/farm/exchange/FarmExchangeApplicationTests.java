@@ -675,7 +675,7 @@ class FarmExchangeApplicationTests {
                 Integer.class
         );
 
-        Assertions.assertTrue(currentPrice != null && currentPrice >= 26L && currentPrice <= 27L);
+        Assertions.assertEquals(27L, currentPrice);
         Assertions.assertEquals(20L, tradeVolume);
         Assertions.assertEquals(2, tradeCount);
         Assertions.assertEquals(2, snapshotCount);
