@@ -611,6 +611,81 @@ class FarmExchangeApplicationTests {
     }
 
     @Test
+    void concurrentMarketBuyWritesPriceSnapshotsWithinPriceBounds() throws Exception {
+        String firstUserId = registerTestUser();
+        String secondUserId = registerTestUser();
+        setTradePassword(firstUserId);
+        setTradePassword(secondUserId);
+        resetMarketTaxRate();
+        jdbcTemplate.update("update items set current_price = base_price where code = 'WHEAT'");
+        jdbcTemplate.update("delete from market_price_snapshots where item_id = (select id from items where code = 'WHEAT')");
+        Integer tradeCountBefore = jdbcTemplate.queryForObject(
+                "select count(*) from market_trades mt join items i on i.id = mt.item_id where i.code = 'WHEAT' and mt.created_at >= now() - interval '24 hours'",
+                Integer.class
+        );
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<Integer> first = executor.submit(() -> marketBuyStatus(firstUserId, 10, ready, start));
+            Future<Integer> second = executor.submit(() -> marketBuyStatus(secondUserId, 10, ready, start));
+
+            Assertions.assertTrue(ready.await(5, TimeUnit.SECONDS));
+            start.countDown();
+
+            int firstStatus = first.get(10, TimeUnit.SECONDS);
+            int secondStatus = second.get(10, TimeUnit.SECONDS);
+
+            Assertions.assertEquals(2, successCount(firstStatus, secondStatus));
+        } finally {
+            executor.shutdownNow();
+        }
+
+        Long currentPrice = jdbcTemplate.queryForObject(
+                "select current_price from items where code = 'WHEAT'",
+                Long.class
+        );
+        Long tradeVolume = jdbcTemplate.queryForObject(
+                "select coalesce(sum(mt.quantity), 0) from market_trades mt join items i on i.id = mt.item_id where i.code = 'WHEAT' and mt.side = 'BUY' and mt.user_id in (?::uuid, ?::uuid)",
+                Long.class,
+                firstUserId,
+                secondUserId
+        );
+        Integer tradeCount = jdbcTemplate.queryForObject(
+                "select count(*) from market_trades mt join items i on i.id = mt.item_id where i.code = 'WHEAT' and mt.side = 'BUY' and mt.user_id in (?::uuid, ?::uuid)",
+                Integer.class,
+                firstUserId,
+                secondUserId
+        );
+        Integer snapshotCount = jdbcTemplate.queryForObject(
+                "select count(*) from market_price_snapshots mps join items i on i.id = mps.item_id where i.code = 'WHEAT'",
+                Integer.class
+        );
+        Long minSnapshotPrice = jdbcTemplate.queryForObject(
+                "select min(mps.price) from market_price_snapshots mps join items i on i.id = mps.item_id where i.code = 'WHEAT'",
+                Long.class
+        );
+        Long maxSnapshotPrice = jdbcTemplate.queryForObject(
+                "select max(mps.price) from market_price_snapshots mps join items i on i.id = mps.item_id where i.code = 'WHEAT'",
+                Long.class
+        );
+        Integer maxSnapshotTradeCount = jdbcTemplate.queryForObject(
+                "select max(mps.trade_count_24h) from market_price_snapshots mps join items i on i.id = mps.item_id where i.code = 'WHEAT'",
+                Integer.class
+        );
+
+        Assertions.assertTrue(currentPrice != null && currentPrice >= 26L && currentPrice <= 27L);
+        Assertions.assertEquals(20L, tradeVolume);
+        Assertions.assertEquals(2, tradeCount);
+        Assertions.assertEquals(2, snapshotCount);
+        Assertions.assertTrue(minSnapshotPrice != null && minSnapshotPrice >= 12L);
+        Assertions.assertTrue(maxSnapshotPrice != null && maxSnapshotPrice <= 50L);
+        Assertions.assertTrue(maxSnapshotTradeCount != null && tradeCountBefore != null &&
+                maxSnapshotTradeCount >= tradeCountBefore + 1 && maxSnapshotTradeCount <= tradeCountBefore + 2);
+    }
+
+    @Test
     void bulkMarketTradeRequiresTokenAndConsumesIt() throws Exception {
         String userId = registerTestUser();
         setTradePassword(userId);
@@ -1050,11 +1125,15 @@ class FarmExchangeApplicationTests {
     }
 
     private int marketBuyStatus(String userId, CountDownLatch ready, CountDownLatch start) throws Exception {
+        return marketBuyStatus(userId, 200, ready, start);
+    }
+
+    private int marketBuyStatus(String userId, long quantity, CountDownLatch ready, CountDownLatch start) throws Exception {
         ready.countDown();
         Assertions.assertTrue(start.await(5, TimeUnit.SECONDS));
         return mockMvc.perform(post("/api/users/" + userId + "/market/buy")
                         .contentType("application/json")
-                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":200,\"tradePassword\":\"654321\"}"))
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":" + quantity + ",\"tradePassword\":\"654321\"}"))
                 .andReturn()
                 .getResponse()
                 .getStatus();
