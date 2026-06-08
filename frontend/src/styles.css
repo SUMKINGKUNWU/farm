@@ -1384,7 +1384,8 @@ td small {
   .split,
   .game-layout,
   .shop-layout,
-  .private-game-grid {
+  .private-game-grid,
+  .market-game-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1425,6 +1426,44 @@ td small {
     width: calc(100% - 32px);
     overflow-x: auto;
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  .shell {
+    width: min(100%, calc(100vw - 16px));
+    margin: 8px auto;
+    gap: 10px;
+  }
+
+  .sidebar,
+  .workspace,
+  .farm-canvas,
+  .game-shell {
+    padding: 14px;
+  }
+
+  .workspace {
+    min-height: auto;
+  }
+
+  .game-slot-grid,
+  .float-grid,
+  .asset-summary,
+  .hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-heading,
+  .expand-actions,
+  .panel-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .game-bottom-tabs button {
+    min-width: 74px;
+    padding: 12px;
   }
 }
 
