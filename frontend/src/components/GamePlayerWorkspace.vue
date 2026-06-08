@@ -70,7 +70,7 @@
                 >
                   <span class="slot-top"><i>#{{ cell.index }}</i><b>{{ slotStatusText(cell) }}</b></span>
                   <strong>{{ !cell.unlocked ? '未扩建' : cell.growth ? cell.growth.outputItemCode : '空闲' }}</strong>
-                  <small>{{ slotActionText(cell, 'Plant') }}</small>
+                  <small>{{ slotActionText(cell, '点击播种') }}</small>
                 </button>
               </div>
             </article>
@@ -88,7 +88,7 @@
                 >
                   <span class="slot-top"><i>#{{ cell.index }}</i><b>{{ slotStatusText(cell) }}</b></span>
                   <strong>{{ !cell.unlocked ? '未扩建' : cell.growth ? cell.growth.outputItemCode : '空闲' }}</strong>
-                  <small>{{ slotActionText(cell, 'Raise') }}</small>
+                  <small>{{ slotActionText(cell, '点击养殖') }}</small>
                 </button>
               </div>
             </article>
@@ -336,15 +336,15 @@ function slotCells(slotList) {
 }
 
 function slotStatusText(cell) {
-  if (!cell?.unlocked) return 'Locked'
-  if (!cell.growth) return 'Open'
-  return isReady(cell.growth) ? 'Ready' : 'Growing'
+  if (!cell?.unlocked) return '未扩建'
+  if (!cell.growth) return '可投入'
+  return isReady(cell.growth) ? '可收获' : '成长中'
 }
 
 function slotActionText(cell, emptyText) {
-  if (!cell?.unlocked) return 'Expand first'
+  if (!cell?.unlocked) return '先扩建栏位'
   if (!cell.growth) return emptyText
-  return isReady(cell.growth) ? 'Click harvest' : formatDate(cell.growth.readyAt)
+  return isReady(cell.growth) ? '点击收获' : formatDate(cell.growth.readyAt)
 }
 
 function showFloat(type, info = null) {
