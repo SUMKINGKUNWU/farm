@@ -102,6 +102,10 @@
           </div>
           <div class="shop-layout">
             <form class="game-card-form" @submit.prevent="purchaseShopItem">
+              <div v-if="!player.summary?.tradePasswordSet" class="requirement-hint">
+                <strong>需要先设置交易密码</strong>
+                <span>购买种子或动物前，请点底部中间按钮打开个人信息并设置 6 位交易密码。</span>
+              </div>
               <label>商品<select v-model="forms.shopItemCode"><option v-for="item in allShopOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ item.code }}</option></select></label>
               <label>数量<input v-model.number="forms.shopQuantity" type="number" min="1" /></label>
               <label>交易密码<input v-model="forms.shopTradePassword" type="password" placeholder="6 位数字" /></label>
@@ -112,7 +116,10 @@
               <button v-for="item in player.inventory" :key="item.itemId" type="button" class="inventory-pill" @click="showFloat('item', item)">
                 <span>{{ item.itemName }}</span><strong>{{ item.availableQuantity }}</strong>
               </button>
-              <p v-if="!player.inventory.length" class="muted">暂无库存，先购买种子或动物。</p>
+              <div v-if="!player.inventory.length" class="empty-action">
+                <strong>库存为空</strong>
+                <span>先在左侧选择种子或动物并购买，随后回到农场投入生产。</span>
+              </div>
             </div>
           </div>
         </section>
@@ -124,6 +131,10 @@
           </div>
           <div class="market-game-grid">
             <form class="game-card-form" @submit.prevent="submitMarket('BUY')">
+              <div v-if="!player.summary?.tradePasswordSet" class="requirement-hint">
+                <strong>交易密码未设置</strong>
+                <span>交易站买入和卖出都需要交易密码，系统会在后端再次校验。</span>
+              </div>
               <label>商品<select v-model="forms.marketItemCode"><option v-for="item in harvestOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ item.code }}</option></select></label>
               <label>数量<input v-model.number="forms.marketQuantity" type="number" min="1" /></label>
               <label>交易密码<input v-model="forms.marketTradePassword" type="password" placeholder="6 位数字" /></label>
@@ -167,6 +178,10 @@
           </div>
           <div class="private-game-grid">
             <form class="game-card-form" @submit.prevent="createPrivateTrade">
+              <div v-if="!player.summary?.tradePasswordSet" class="requirement-hint">
+                <strong>私下交易前置条件</strong>
+                <span>私下交易需要双方都设置并输入自己的交易密码。</span>
+              </div>
               <label>买方用户 ID<input v-model.trim="forms.privateBuyerUserId" placeholder="对方玩家 UUID" /></label>
               <label>商品<select v-model="forms.privateItemCode"><option v-for="item in harvestOptions" :key="item.code" :value="item.code">{{ item.name }} · {{ item.code }}</option></select></label>
               <label>数量<input v-model.number="forms.privateQuantity" type="number" min="1" /></label>
@@ -184,7 +199,10 @@
                 <button v-if="offer.buyerUserId === player.currentUser?.userId && offer.status === 'WAIT_ACCEPT'" class="button mini" type="button" :disabled="player.loading" @click="acceptPrivateTrade(offer.offerId)">接受</button>
                 <button v-else-if="offer.sellerUserId === player.currentUser?.userId && offer.status === 'WAIT_ACCEPT'" class="button ghost mini" type="button" :disabled="player.loading" @click="player.cancelPrivateTrade(offer.offerId)">取消</button>
               </div>
-              <p v-if="!player.privateTrades.length" class="muted">暂无私下交易报价。</p>
+              <div v-if="!player.privateTrades.length" class="empty-action">
+                <strong>暂无私下交易报价</strong>
+                <span>卖方创建报价后，买方可在这里输入交易密码并接受报价。</span>
+              </div>
             </div>
           </div>
         </section>

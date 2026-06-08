@@ -1205,6 +1205,39 @@ td small {
   font-size: 20px;
 }
 
+.requirement-hint,
+.empty-action {
+  display: grid;
+  gap: 5px;
+  padding: 13px 15px;
+  border-radius: 16px;
+  line-height: 1.55;
+}
+
+.requirement-hint {
+  border: 1px solid rgba(185, 111, 43, .28);
+  background: rgba(219, 169, 74, .18);
+}
+
+.empty-action {
+  width: 100%;
+  border: 1px solid rgba(82, 116, 73, .22);
+  background: rgba(82, 116, 73, .1);
+}
+
+.requirement-hint strong,
+.empty-action strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.requirement-hint span,
+.empty-action span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .offer-card {
   display: grid;
   grid-template-columns: 1fr auto;
