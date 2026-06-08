@@ -23,34 +23,74 @@
         <div class="fee-preview"><span>私下交易税 5%</span><strong>{{ formatMoney(privateTaxEstimate) }}</strong></div>
         <button class="button wide" type="submit" :disabled="loading">创建报价</button>
       </form>
-      <div class="offer-stack">
+      <div class="offer-stack private-offer-groups">
         <label>接受报价交易密码<input v-model="forms.privateAcceptPassword" type="password" placeholder="买方交易密码" /></label>
         <label>大宗令牌<input v-model.trim="forms.privateBulkTokenCode" placeholder="可选" /></label>
-        <div v-for="offer in privateTrades" :key="offer.offerId" class="offer-card">
-          <strong>{{ offer.itemCode }} × {{ offer.quantity }}</strong>
-          <span>{{ formatMoney(offer.priceAmount) }} · {{ offer.status }}</span>
-          <button
-            v-if="offer.buyerUserId === currentUser?.userId && offer.status === 'WAIT_ACCEPT'"
-            class="button mini"
-            type="button"
-            :disabled="loading"
-            @click="emit('accept-private-trade', offer.offerId)"
-          >
-            接受
-          </button>
-          <button
-            v-else-if="offer.sellerUserId === currentUser?.userId && offer.status === 'WAIT_ACCEPT'"
-            class="button ghost mini"
-            type="button"
-            :disabled="loading"
-            @click="emit('cancel-private-trade', offer.offerId)"
-          >
-            取消
-          </button>
+
+        <div class="offer-group">
+          <div class="offer-group-head">
+            <strong>发给我的</strong>
+            <span>{{ incomingOffers.length }}</span>
+          </div>
+          <div v-for="offer in incomingOffers" :key="offer.offerId" class="offer-card">
+            <strong>{{ offer.itemCode }} × {{ offer.quantity }}</strong>
+            <span>{{ formatMoney(offer.priceAmount) }} · {{ offer.status }}</span>
+            <small>卖方：{{ offer.sellerUsername || offer.sellerUserId }}</small>
+            <button
+              v-if="offer.status === 'WAIT_ACCEPT'"
+              class="button mini"
+              type="button"
+              :disabled="loading"
+              @click="emit('accept-private-trade', offer.offerId)"
+            >
+              接受
+            </button>
+          </div>
+          <div v-if="!incomingOffers.length" class="empty-action">
+            <strong>暂无待处理报价</strong>
+            <span>别人发给你的私下交易会出现在这里。</span>
+          </div>
         </div>
-        <div v-if="!privateTrades.length" class="empty-action">
-          <strong>暂无私下交易报价</strong>
-          <span>卖方创建报价后，买方可在这里输入交易密码并接受报价。</span>
+
+        <div class="offer-group">
+          <div class="offer-group-head">
+            <strong>我发出的</strong>
+            <span>{{ outgoingOffers.length }}</span>
+          </div>
+          <div v-for="offer in outgoingOffers" :key="offer.offerId" class="offer-card">
+            <strong>{{ offer.itemCode }} × {{ offer.quantity }}</strong>
+            <span>{{ formatMoney(offer.priceAmount) }} · {{ offer.status }}</span>
+            <small>买方：{{ offer.buyerUsername || offer.buyerUserId }}</small>
+            <button
+              v-if="offer.status === 'WAIT_ACCEPT'"
+              class="button ghost mini"
+              type="button"
+              :disabled="loading"
+              @click="emit('cancel-private-trade', offer.offerId)"
+            >
+              取消
+            </button>
+          </div>
+          <div v-if="!outgoingOffers.length" class="empty-action">
+            <strong>暂无我发出的报价</strong>
+            <span>创建报价后，会在这里查看状态和取消未成交报价。</span>
+          </div>
+        </div>
+
+        <div class="offer-group">
+          <div class="offer-group-head">
+            <strong>已结束</strong>
+            <span>{{ archivedOffers.length }}</span>
+          </div>
+          <div v-for="offer in archivedOffers" :key="offer.offerId" class="offer-card archived-offer">
+            <strong>{{ offer.itemCode }} × {{ offer.quantity }}</strong>
+            <span>{{ formatMoney(offer.priceAmount) }} · {{ offer.status }}</span>
+            <small>{{ formatDate(offer.createdAt) }}</small>
+          </div>
+          <div v-if="!archivedOffers.length" class="empty-action">
+            <strong>暂无已结束报价</strong>
+            <span>已完成、已取消和已过期的报价会归档在这里。</span>
+          </div>
         </div>
       </div>
     </div>
@@ -58,7 +98,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   activeTab: { type: String, required: true },
   summary: { type: Object, default: null },
   currentUser: { type: Object, default: null },
@@ -71,4 +113,21 @@ defineProps({
 })
 
 const emit = defineEmits(['open-float', 'create-private-trade', 'accept-private-trade', 'cancel-private-trade'])
+
+const incomingOffers = computed(() =>
+  props.privateTrades.filter((offer) => offer.buyerUserId === props.currentUser?.userId && offer.status === 'WAIT_ACCEPT')
+)
+
+const outgoingOffers = computed(() =>
+  props.privateTrades.filter((offer) => offer.sellerUserId === props.currentUser?.userId && offer.status === 'WAIT_ACCEPT')
+)
+
+const archivedOffers = computed(() =>
+  props.privateTrades.filter((offer) => offer.status !== 'WAIT_ACCEPT')
+)
+
+function formatDate(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('zh-CN')
+}
 </script>

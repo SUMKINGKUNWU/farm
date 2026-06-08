@@ -693,6 +693,111 @@ h3 {
   min-width: 980px;
 }
 
+.records-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.player-activity-summary {
+  margin-bottom: 16px;
+}
+
+.delta-up {
+  color: var(--success);
+  font-weight: 900;
+}
+
+.delta-down {
+  color: var(--danger);
+  font-weight: 900;
+}
+
+.search-results,
+.private-offer-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.toolbar-row,
+.pager-row,
+.table-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+
+.toolbar-row {
+  margin-bottom: 16px;
+}
+
+.toolbar-row label {
+  display: grid;
+  gap: 6px;
+  min-width: 120px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.table-meta,
+.pager-row {
+  margin-top: 14px;
+}
+
+.table-meta {
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pager-row {
+  justify-content: flex-end;
+}
+
+.search-result {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  text-align: left;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 248, 232, .78);
+  cursor: pointer;
+}
+
+.search-result strong,
+.offer-group-head strong {
+  font-size: 14px;
+}
+
+.search-result span,
+.search-result small,
+.offer-group-head span,
+.archived-offer small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.offer-group {
+  display: grid;
+  gap: 10px;
+}
+
+.offer-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.archived-offer {
+  opacity: .82;
+}
+
 .button.mini {
   padding: 8px 10px;
   border-radius: 12px;

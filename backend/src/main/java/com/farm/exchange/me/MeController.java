@@ -1,5 +1,8 @@
 package com.farm.exchange.me;
 
+import com.farm.exchange.activity.PlayerActivityService;
+import com.farm.exchange.activity.PlayerLedgerEntryResponse;
+import com.farm.exchange.activity.PlayerTradeRecordResponse;
 import com.farm.exchange.auth.AuthPrincipal;
 import com.farm.exchange.auth.AuthTokenService;
 import com.farm.exchange.bulk.BulkTokenResponse;
@@ -54,6 +57,7 @@ public class MeController {
     private final MarketService marketService;
     private final PrivateTradeService privateTradeService;
     private final BulkTokenService bulkTokenService;
+    private final PlayerActivityService playerActivityService;
 
     public MeController(
             AuthTokenService authTokenService,
@@ -63,7 +67,8 @@ public class MeController {
             ShopService shopService,
             MarketService marketService,
             PrivateTradeService privateTradeService,
-            BulkTokenService bulkTokenService
+            BulkTokenService bulkTokenService,
+            PlayerActivityService playerActivityService
     ) {
         this.authTokenService = authTokenService;
         this.userService = userService;
@@ -73,6 +78,7 @@ public class MeController {
         this.marketService = marketService;
         this.privateTradeService = privateTradeService;
         this.bulkTokenService = bulkTokenService;
+        this.playerActivityService = playerActivityService;
     }
 
     @PostMapping("/trade-password")
@@ -174,6 +180,16 @@ public class MeController {
     @GetMapping("/bulk-tokens")
     public List<BulkTokenResponse> bulkTokens(@RequestHeader(value = "Authorization", required = false) String authorization) {
         return bulkTokenService.list(currentUserId(authorization));
+    }
+
+    @GetMapping("/trades")
+    public List<PlayerTradeRecordResponse> trades(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return playerActivityService.trades(currentUserId(authorization));
+    }
+
+    @GetMapping("/ledger")
+    public List<PlayerLedgerEntryResponse> ledger(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return playerActivityService.ledger(currentUserId(authorization));
     }
 
     private UUID currentUserId(String authorization) {

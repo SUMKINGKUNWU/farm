@@ -37,10 +37,18 @@
       @load-assets="admin.loadAssets"
     />
     <TradeRecordsPanel
-      :trades="admin.trades"
+      :trade-result="admin.tradeResult"
+      :trade-filters="admin.tradeFilters"
       :loading="admin.loading"
       :format-money="formatMoney"
+      :format-date="formatDate"
       @load-trades="admin.loadTrades"
+    />
+    <AuditLogPanel
+      :audit-logs="admin.auditLogs"
+      :loading="admin.loading"
+      :format-date="formatDate"
+      @load-audit-logs="admin.loadAuditLogs"
     />
   </div>
 </template>
@@ -53,6 +61,7 @@ import TaxConfigPanel from './admin/TaxConfigPanel.vue'
 import BulkTokenPanel from './admin/BulkTokenPanel.vue'
 import PlayerAssetsPanel from './admin/PlayerAssetsPanel.vue'
 import TradeRecordsPanel from './admin/TradeRecordsPanel.vue'
+import AuditLogPanel from './admin/AuditLogPanel.vue'
 
 defineProps({
   adminTaxTypes: { type: Array, required: true },

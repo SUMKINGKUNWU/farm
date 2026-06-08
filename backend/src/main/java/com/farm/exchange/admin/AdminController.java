@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -52,8 +53,26 @@ public class AdminController {
     }
 
     @GetMapping("/users/{targetUserId}/trades")
-    public List<AdminTradeRecordResponse> userTrades(@RequestHeader(value = "Authorization", required = false) String authorization, @PathVariable UUID targetUserId) {
+    public AdminTradeQueryResponse userTrades(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable UUID targetUserId,
+            @RequestParam(value = "source", defaultValue = "ALL") String source,
+            @RequestParam(value = "status", defaultValue = "ALL") String status,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
         AuthPrincipal admin = authTokenService.require(authorization);
-        return adminService.userTrades(admin.getUserId(), targetUserId);
+        return adminService.userTrades(admin.getUserId(), targetUserId, source, status, page, pageSize);
+    }
+
+    @GetMapping("/audit-logs")
+    public List<AdminAuditLogResponse> auditLogs(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        AuthPrincipal admin = authTokenService.require(authorization);
+        return adminService.auditLogs(admin.getUserId());
+    }
+
+    @GetMapping("/users/search")
+    public List<AdminUserSearchResponse> searchUsers(@RequestHeader(value = "Authorization", required = false) String authorization, @RequestParam("q") String query) {
+        AuthPrincipal admin = authTokenService.require(authorization);
+        return adminService.searchUsers(admin.getUserId(), query);
     }
 }

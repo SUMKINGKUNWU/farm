@@ -13,6 +13,27 @@
         <span>当前管理员</span>
         <strong>{{ currentUser?.username || identityForm.username || '已登录' }}</strong>
       </div>
+      <label>
+        搜索玩家
+        <input
+          v-model.trim="identityForm.userSearchQuery"
+          placeholder="输入用户名或昵称"
+          @keydown.enter="emit('search-users')"
+        />
+      </label>
+      <div v-if="identityForm.userSearchResults?.length" class="search-results">
+        <button
+          v-for="user in identityForm.userSearchResults"
+          :key="user.userId"
+          class="search-result"
+          type="button"
+          @click="emit('select-user', user)"
+        >
+          <strong>{{ user.nickname || user.username }}</strong>
+          <span>{{ user.username }} · {{ user.status }}</span>
+          <small>{{ user.userId }}</small>
+        </button>
+      </div>
       <label>目标玩家用户 ID<input v-model.trim="identityForm.targetUserId" placeholder="要查询或发令牌的玩家 UUID" /></label>
       <button class="button ghost" type="button" :disabled="loading" @click="emit('refresh-console')">
         刷新控制台
@@ -30,5 +51,5 @@ defineProps({
   loading: { type: Boolean, required: true }
 })
 
-const emit = defineEmits(['login', 'refresh-console', 'logout'])
+const emit = defineEmits(['login', 'refresh-console', 'logout', 'search-users', 'select-user'])
 </script>

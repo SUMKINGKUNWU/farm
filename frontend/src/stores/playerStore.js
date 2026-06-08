@@ -32,6 +32,8 @@ export const usePlayerStore = defineStore('player', {
     quote: null,
     bulkTokens: [],
     privateTrades: [],
+    tradeHistory: [],
+    ledgerEntries: [],
     lastProduction: null,
     lastTrade: null,
     loading: false,
@@ -149,6 +151,8 @@ export const usePlayerStore = defineStore('player', {
       this.growthInstances = []
       this.bulkTokens = []
       this.privateTrades = []
+      this.tradeHistory = []
+      this.ledgerEntries = []
       this.lastProduction = null
       this.lastTrade = null
       this.setMessage('已退出玩家账号')
@@ -288,6 +292,18 @@ export const usePlayerStore = defineStore('player', {
         })
         await this.loadDashboard()
       }, '私下交易报价已取消')
+    },
+    async loadActivity() {
+      return this.run(async () => {
+        const headers = this.authHeaders()
+        const [tradeHistory, ledgerEntries] = await Promise.all([
+          requestJson('/api/me/trades', { headers }),
+          requestJson('/api/me/ledger', { headers })
+        ])
+        this.tradeHistory = tradeHistory
+        this.ledgerEntries = ledgerEntries
+        return { tradeHistory, ledgerEntries }
+      }, '活动记录已刷新')
     }
   }
 })

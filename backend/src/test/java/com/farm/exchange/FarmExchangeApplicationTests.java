@@ -980,6 +980,204 @@ class FarmExchangeApplicationTests {
     }
 
     @Test
+    void businessErrorContractsStayStableForFrontendRecognition() throws Exception {
+        String userId = registerTestUser();
+        setTradePassword(userId);
+        resetMarketTaxRate();
+
+        mockMvc.perform(post("/api/users/" + userId + "/shop/purchase")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"CHICKEN\",\"quantity\":999,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("INSUFFICIENT_BALANCE"))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.path").value("/api/users/" + userId + "/shop/purchase"));
+
+        mockMvc.perform(post("/api/users/" + userId + "/market/sell")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":1,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("INSUFFICIENT_INVENTORY"))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.path").value("/api/users/" + userId + "/market/sell"));
+
+        grantInventory(userId, "WHEAT_SEED", 1);
+        String farmPlotId = jdbcTemplate.queryForObject(
+                "select id::text from farm_plots where user_id = ?::uuid order by slot_index limit 1",
+                String.class,
+                userId
+        );
+
+        MvcResult plantResult = mockMvc.perform(post("/api/users/" + userId + "/farm/plots/" + farmPlotId + "/plant")
+                        .param("itemCode", "WHEAT_SEED"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String growthId = extractJsonString(plantResult.getResponse().getContentAsString(), "growthId");
+
+        mockMvc.perform(post("/api/users/" + userId + "/growth/" + growthId + "/harvest"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("STATE_CONFLICT"))
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.path").value("/api/users/" + userId + "/growth/" + growthId + "/harvest"));
+
+        jdbcTemplate.update("update wallets set balance = 300000 where user_id = ?::uuid", userId);
+        jdbcTemplate.update("update items set current_price = base_price where code = 'WHEAT'");
+
+        mockMvc.perform(post("/api/users/" + userId + "/market/buy")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":5000,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("BULK_TOKEN_REQUIRED"))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.path").value("/api/users/" + userId + "/market/buy"));
+
+        mockMvc.perform(post("/api/users/" + userId + "/market/buy")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":5000,\"tradePassword\":\"654321\",\"bulkTokenCode\":\"BULK-NOT-FOUND\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("BULK_TOKEN_INVALID"))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.path").value("/api/users/" + userId + "/market/buy"));
+
+        MvcResult expiredTokenResult = mockMvc.perform(post("/api/users/" + userId + "/bulk-tokens")
+                        .contentType("application/json")
+                        .content("{\"allowedItemType\":\"HARVEST\",\"singleTradeLimit\":200000,\"totalLimit\":200000,\"remainingUses\":1,\"expireHours\":24}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String expiredTokenCode = extractJsonString(expiredTokenResult.getResponse().getContentAsString(), "tokenCode");
+        jdbcTemplate.update(
+                "update bulk_trade_tokens set expires_at = now() - interval '1 hour' where user_id = ?::uuid and token_code = ?",
+                userId,
+                expiredTokenCode
+        );
+
+        mockMvc.perform(post("/api/users/" + userId + "/market/buy")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":5000,\"tradePassword\":\"654321\",\"bulkTokenCode\":\"" + expiredTokenCode + "\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("BULK_TOKEN_EXPIRED"))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.path").value("/api/users/" + userId + "/market/buy"));
+
+        MvcResult limitedTokenResult = mockMvc.perform(post("/api/users/" + userId + "/bulk-tokens")
+                        .contentType("application/json")
+                        .content("{\"allowedItemType\":\"HARVEST\",\"singleTradeLimit\":100000,\"totalLimit\":200000,\"remainingUses\":1,\"expireHours\":24}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String limitedTokenCode = extractJsonString(limitedTokenResult.getResponse().getContentAsString(), "tokenCode");
+
+        mockMvc.perform(post("/api/users/" + userId + "/market/buy")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":5000,\"tradePassword\":\"654321\",\"bulkTokenCode\":\"" + limitedTokenCode + "\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("BULK_TOKEN_LIMIT_EXCEEDED"))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.path").value("/api/users/" + userId + "/market/buy"));
+    }
+
+    @Test
+    void meActivityEndpointsExposeTradeAndLedgerHistory() throws Exception {
+        String sellerId = registerTestUser();
+        String sellerUsername = lastRegisteredUsername;
+        String buyerId = registerTestUser();
+        setTradePassword(sellerId);
+        grantInventory(sellerId, "WHEAT", 30);
+        resetMarketTaxRate();
+        String sellerToken = login(sellerUsername);
+
+        mockMvc.perform(post("/api/me/market/sell")
+                        .header("Authorization", "Bearer " + sellerToken)
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"WHEAT\",\"quantity\":5,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.side").value("SELL"));
+
+        MvcResult offerResult = mockMvc.perform(post("/api/me/private-trades")
+                        .header("Authorization", "Bearer " + sellerToken)
+                        .contentType("application/json")
+                        .content("{\"buyerUserId\":\"" + buyerId + "\",\"itemCode\":\"WHEAT\",\"quantity\":10,\"priceAmount\":500,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("WAIT_ACCEPT"))
+                .andReturn();
+        String offerId = extractJsonString(offerResult.getResponse().getContentAsString(), "offerId");
+
+        mockMvc.perform(post("/api/me/private-trades/" + offerId + "/cancel")
+                        .header("Authorization", "Bearer " + sellerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+        mockMvc.perform(get("/api/me/trades")
+                        .header("Authorization", "Bearer " + sellerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].tradeSource").value("PRIVATE"))
+                .andExpect(jsonPath("$[0].status").value("CANCELLED"))
+                .andExpect(jsonPath("$[0].counterpartyUserId").value(buyerId))
+                .andExpect(jsonPath("$[1].tradeSource").value("MARKET"))
+                .andExpect(jsonPath("$[1].side").value("SELL"));
+
+        mockMvc.perform(get("/api/me/ledger")
+                        .header("Authorization", "Bearer " + sellerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].assetType").value("ITEM"))
+                .andExpect(jsonPath("$[0].reason").value("PRIVATE_TRADE_RELEASE"))
+                .andExpect(jsonPath("$[1].reason").value("PRIVATE_TRADE_LOCK"));
+
+        Integer marketSellLedgerCount = jdbcTemplate.queryForObject(
+                "select count(*) from asset_ledger where user_id = ?::uuid and reason = 'MARKET_SELL'",
+                Integer.class,
+                sellerId
+        );
+        Assertions.assertEquals(2, marketSellLedgerCount);
+    }
+
+    @Test
+    void expiredPrivateTradesAreNormalizedWhenListingOffers() throws Exception {
+        String sellerId = registerTestUser();
+        String buyerId = registerTestUser();
+        setTradePassword(sellerId);
+        grantInventory(sellerId, "WHEAT", 20);
+
+        MvcResult offerResult = mockMvc.perform(post("/api/users/" + sellerId + "/private-trades")
+                        .contentType("application/json")
+                        .content("{\"buyerUserId\":\"" + buyerId + "\",\"itemCode\":\"WHEAT\",\"quantity\":10,\"priceAmount\":500,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("WAIT_ACCEPT"))
+                .andReturn();
+        String offerId = extractJsonString(offerResult.getResponse().getContentAsString(), "offerId");
+
+        jdbcTemplate.update(
+                "update private_trade_offers set expires_at = now() - interval '1 hour' where id = ?::uuid",
+                offerId
+        );
+
+        mockMvc.perform(get("/api/users/" + sellerId + "/private-trades"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].offerId").value(offerId))
+                .andExpect(jsonPath("$[0].status").value("EXPIRED"));
+
+        Long availableQuantity = jdbcTemplate.queryForObject(
+                "select available_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                sellerId
+        );
+        Long lockedQuantity = jdbcTemplate.queryForObject(
+                "select locked_quantity from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?::uuid and i.code = 'WHEAT'",
+                Long.class,
+                sellerId
+        );
+        Integer expireReleaseCount = jdbcTemplate.queryForObject(
+                "select count(*) from asset_ledger where user_id = ?::uuid and reason = 'PRIVATE_TRADE_EXPIRE_RELEASE'",
+                Integer.class,
+                sellerId
+        );
+
+        Assertions.assertEquals(20L, availableQuantity);
+        Assertions.assertEquals(0L, lockedQuantity);
+        Assertions.assertEquals(1, expireReleaseCount);
+    }
+
+    @Test
     void adminCanUpdateTaxIssueTokenAndQueryUserAssetsTrades() throws Exception {
         String adminId = registerTestUser();
         String adminUsername = lastRegisteredUsername;
@@ -1026,17 +1224,51 @@ class FarmExchangeApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.taxAmount").value(62));
 
+        mockMvc.perform(post("/api/users/" + playerId + "/market/buy")
+                        .contentType("application/json")
+                        .content("{\"itemCode\":\"CORN\",\"quantity\":20,\"tradePassword\":\"654321\"}"))
+                .andExpect(status().isOk());
+
         mockMvc.perform(get("/api/admin/users/" + playerId + "/assets")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(playerId))
-                .andExpect(jsonPath("$.inventory[0].itemCode").value("WHEAT"));
+                .andExpect(jsonPath("$.inventory[0].itemCode").value("CORN"))
+                .andExpect(jsonPath("$.inventory[1].itemCode").value("WHEAT"));
+
+        mockMvc.perform(get("/api/admin/users/search")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("q", playerUsername.substring(0, 8)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].userId").value(playerId))
+                .andExpect(jsonPath("$[0].username").value(playerUsername));
 
         mockMvc.perform(get("/api/admin/users/" + playerId + "/trades")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].tradeSource").value("MARKET"))
-                .andExpect(jsonPath("$[0].itemCode").value("WHEAT"));
+                .andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.records[0].tradeSource").value("MARKET"))
+                .andExpect(jsonPath("$.records[0].itemCode").value("CORN"));
+
+        mockMvc.perform(get("/api/admin/users/" + playerId + "/trades")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("source", "MARKET")
+                        .param("status", "COMPLETED")
+                        .param("page", "1")
+                        .param("pageSize", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.pageSize").value(1))
+                .andExpect(jsonPath("$.hasNext").value(true))
+                .andExpect(jsonPath("$.records.length()").value(1))
+                .andExpect(jsonPath("$.records[0].itemCode").value("CORN"));
+
+        mockMvc.perform(get("/api/admin/audit-logs")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].action").value("ISSUE_BULK_TOKEN"))
+                .andExpect(jsonPath("$[1].action").value("UPDATE_TAX_CONFIG"));
 
         Integer auditCount = jdbcTemplate.queryForObject(
                 "select count(*) from admin_audit_logs where admin_user_id = ?::uuid and action in ('UPDATE_TAX_CONFIG', 'ISSUE_BULK_TOKEN')",

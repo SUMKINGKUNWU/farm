@@ -5,18 +5,69 @@
         <span class="section-kicker">Trade Records</span>
         <h3>交易记录</h3>
       </div>
-      <button class="button ghost" type="button" :disabled="loading" @click="emit('load-trades')">
-        读取交易
+      <button class="button ghost" type="button" :disabled="loading" @click="refreshCurrentPage">
+        刷新交易
       </button>
     </div>
+
+    <div class="toolbar-row">
+      <label>
+        来源
+        <select v-model="draftFilters.source">
+          <option value="ALL">全部</option>
+          <option value="MARKET">交易站</option>
+          <option value="PRIVATE">私下交易</option>
+        </select>
+      </label>
+      <label>
+        状态
+        <select v-model="draftFilters.status">
+          <option value="ALL">全部</option>
+          <option value="COMPLETED">已完成</option>
+          <option value="WAIT_ACCEPT">待接受</option>
+          <option value="SETTLING">结算中</option>
+          <option value="CANCELLED">已取消</option>
+          <option value="EXPIRED">已过期</option>
+          <option value="FAILED">失败</option>
+        </select>
+      </label>
+      <label>
+        每页
+        <select v-model.number="draftFilters.pageSize">
+          <option :value="10">10</option>
+          <option :value="20">20</option>
+          <option :value="50">50</option>
+        </select>
+      </label>
+      <button class="button subtle" type="button" :disabled="loading" @click="applyFilters">
+        应用筛选
+      </button>
+    </div>
+
     <div ref="chartEl" class="chart"></div>
+
+    <div class="table-meta">
+      <span>共 {{ tradeResult.total }} 条</span>
+      <span>第 {{ tradeResult.page }} / {{ totalPages }} 页</span>
+    </div>
+
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>来源</th><th>方向</th><th>商品</th><th>数量</th><th>金额</th><th>税费</th><th>状态</th></tr>
+          <tr>
+            <th>时间</th>
+            <th>来源</th>
+            <th>方向</th>
+            <th>商品</th>
+            <th>数量</th>
+            <th>金额</th>
+            <th>税费</th>
+            <th>状态</th>
+          </tr>
         </thead>
         <tbody>
-          <tr v-for="trade in trades" :key="trade.tradeId">
+          <tr v-for="trade in tradeResult.records" :key="trade.tradeId">
+            <td>{{ formatDate(trade.createdAt) }}</td>
             <td>{{ trade.tradeSource }}</td>
             <td>{{ trade.side }}</td>
             <td>{{ trade.itemCode }}</td>
@@ -25,26 +76,59 @@
             <td>{{ formatMoney(trade.taxAmount) }}</td>
             <td>{{ trade.status }}</td>
           </tr>
-          <tr v-if="!trades.length"><td colspan="7">暂无交易记录</td></tr>
+          <tr v-if="!tradeResult.records.length">
+            <td colspan="8">暂无交易记录</td>
+          </tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="pager-row">
+      <button class="button ghost" type="button" :disabled="loading || tradeResult.page <= 1" @click="goPrev">
+        上一页
+      </button>
+      <button class="button ghost" type="button" :disabled="loading || !tradeResult.hasNext" @click="goNext">
+        下一页
+      </button>
     </div>
   </section>
 </template>
 
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 
 const props = defineProps({
-  trades: { type: Array, required: true },
+  tradeResult: { type: Object, required: true },
+  tradeFilters: { type: Object, required: true },
   loading: { type: Boolean, required: true },
-  formatMoney: { type: Function, required: true }
+  formatMoney: { type: Function, required: true },
+  formatDate: { type: Function, required: true }
 })
 
 const emit = defineEmits(['load-trades'])
 const chartEl = ref(null)
+const draftFilters = reactive({
+  source: 'ALL',
+  status: 'ALL',
+  pageSize: 10
+})
 let chart
 let echartsModulePromise
+
+const totalPages = computed(() => {
+  const size = Math.max(Number(props.tradeResult.pageSize || props.tradeFilters.pageSize || 10), 1)
+  return Math.max(1, Math.ceil(Number(props.tradeResult.total || 0) / size))
+})
+
+watch(
+  () => props.tradeFilters,
+  (filters) => {
+    draftFilters.source = filters.source
+    draftFilters.status = filters.status
+    draftFilters.pageSize = filters.pageSize
+  },
+  { deep: true, immediate: true }
+)
 
 async function loadEcharts() {
   if (!echartsModulePromise) {
@@ -57,7 +141,7 @@ async function renderChart() {
   if (!chartEl.value) return
   const echarts = await loadEcharts()
   if (!chart) chart = echarts.init(chartEl.value)
-  const rows = props.trades.slice().reverse()
+  const rows = props.tradeResult.records.slice().reverse()
   chart.setOption({
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis' },
@@ -92,7 +176,28 @@ async function renderChart() {
   })
 }
 
-watch(() => props.trades, () => nextTick(renderChart), { deep: true })
+function applyFilters() {
+  emit('load-trades', {
+    source: draftFilters.source,
+    status: draftFilters.status,
+    pageSize: draftFilters.pageSize,
+    page: 1
+  })
+}
+
+function refreshCurrentPage() {
+  emit('load-trades', { page: props.tradeResult.page })
+}
+
+function goPrev() {
+  emit('load-trades', { page: props.tradeResult.page - 1 })
+}
+
+function goNext() {
+  emit('load-trades', { page: props.tradeResult.page + 1 })
+}
+
+watch(() => props.tradeResult.records, () => nextTick(renderChart), { deep: true })
 
 onMounted(() => {
   renderChart()

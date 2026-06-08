@@ -86,6 +86,15 @@
           @accept-private-trade="acceptPrivateTrade"
           @cancel-private-trade="player.cancelPrivateTrade"
         />
+        <ActivityHistoryPanel
+          :active-tab="activeTab"
+          :trade-history="player.tradeHistory"
+          :ledger-entries="player.ledgerEntries"
+          :loading="player.loading"
+          :format-money="formatMoney"
+          :format-date="formatDate"
+          @refresh-activity="player.loadActivity"
+        />
       </div>
 
       <GameBottomTabs
@@ -123,6 +132,7 @@ import ShopPanel from './player/ShopPanel.vue'
 import MarketPanel from './player/MarketPanel.vue'
 import MarketSidebar from './player/MarketSidebar.vue'
 import PrivateTradePanel from './player/PrivateTradePanel.vue'
+import ActivityHistoryPanel from './player/ActivityHistoryPanel.vue'
 import GameBottomTabs from './player/GameBottomTabs.vue'
 import PlayerFloatLayer from './player/PlayerFloatLayer.vue'
 import { usePlayerStore } from '../stores/playerStore'
@@ -172,8 +182,11 @@ const navItems = [
   { id: 'private', label: '私下', icon: '约' }
 ]
 
-function setActiveTab(tab) {
+async function setActiveTab(tab) {
   activeTab.value = tab
+  if (tab === 'records' && !player.tradeHistory.length && !player.ledgerEntries.length) {
+    await player.loadActivity()
+  }
 }
 
 function formatMoney(value) {

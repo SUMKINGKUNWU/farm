@@ -5,6 +5,7 @@ import com.farm.exchange.bulk.BulkTokenService;
 import com.farm.exchange.common.ApiException;
 import com.farm.exchange.common.ErrorCode;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -88,17 +89,46 @@ public class AdminService {
         return new AdminUserAssetResponse(header.userId, header.username, header.nickname, header.status, header.balance, header.lockedBalance, inventory);
     }
 
-    public List<AdminTradeRecordResponse> userTrades(UUID adminUserId, UUID targetUserId) {
+    public AdminTradeQueryResponse userTrades(UUID adminUserId, UUID targetUserId, String source, String status, int page, int pageSize) {
         ensureAdmin(adminUserId);
         ensureUserExists(targetUserId);
-        return jdbcTemplate.query(
-                "select 'MARKET' as trade_source, mt.id as trade_id, mt.item_id, i.code as item_code, mt.side, mt.quantity, mt.gross_amount as trade_amount, mt.tax_amount, mt.status, mt.created_at " +
+        String tradeSource = normalizeTradeSource(source);
+        String tradeStatus = normalizeTradeStatus(status);
+        int safePage = Math.max(page, 1);
+        int safePageSize = Math.min(Math.max(pageSize, 1), 50);
+        int offset = (safePage - 1) * safePageSize;
+
+        String filteredSql =
+                "from (" +
+                        "select 'MARKET' as trade_source, mt.id as trade_id, mt.item_id, i.code as item_code, mt.side, mt.quantity, mt.gross_amount as trade_amount, mt.tax_amount, mt.status, mt.created_at " +
                         "from market_trades mt join items i on i.id = mt.item_id where mt.user_id = ? " +
                         "union all " +
                         "select 'PRIVATE' as trade_source, p.id as trade_id, p.item_id, i.code as item_code, " +
                         "case when p.seller_user_id = ? then 'SELL' else 'BUY' end as side, p.quantity, p.price_amount as trade_amount, p.tax_amount, p.status, p.created_at " +
                         "from private_trade_offers p join items i on i.id = p.item_id where p.seller_user_id = ? or p.buyer_user_id = ? " +
-                        "order by created_at desc limit 100",
+                        ") trade_records where 1 = 1";
+        List<Object> filters = new ArrayList<>();
+        if (!"ALL".equals(tradeSource)) {
+            filteredSql += " and trade_source = ?";
+            filters.add(tradeSource);
+        }
+        if (!"ALL".equals(tradeStatus)) {
+            filteredSql += " and status = ?";
+            filters.add(tradeStatus);
+        }
+
+        List<Object> baseParams = List.of(targetUserId, targetUserId, targetUserId, targetUserId);
+        List<Object> countParams = new ArrayList<>(baseParams);
+        countParams.addAll(filters);
+        Long total = jdbcTemplate.queryForObject("select count(*) " + filteredSql, Long.class, countParams.toArray());
+
+        List<Object> queryParams = new ArrayList<>(countParams);
+        queryParams.add(safePageSize);
+        queryParams.add(offset);
+        List<AdminTradeRecordResponse> records = jdbcTemplate.query(
+                "select trade_source, trade_id, item_id, item_code, side, quantity, trade_amount, tax_amount, status, created_at " +
+                        filteredSql +
+                        " order by created_at desc limit ? offset ?",
                 (rs, rowNum) -> new AdminTradeRecordResponse(
                         rs.getString("trade_source"),
                         UUID.fromString(rs.getString("trade_id")),
@@ -111,10 +141,53 @@ public class AdminService {
                         rs.getString("status"),
                         rs.getObject("created_at", OffsetDateTime.class)
                 ),
-                targetUserId,
-                targetUserId,
-                targetUserId,
-                targetUserId
+                queryParams.toArray()
+        );
+        long totalCount = total == null ? 0L : total;
+        return new AdminTradeQueryResponse(records, totalCount, safePage, safePageSize, offset + records.size() < totalCount);
+    }
+
+    public List<AdminAuditLogResponse> auditLogs(UUID adminUserId) {
+        ensureAdmin(adminUserId);
+        return jdbcTemplate.query(
+                "select l.id, l.admin_user_id, u.username as admin_username, l.action, l.target_type, l.target_id, l.reason, l.created_at " +
+                        "from admin_audit_logs l left join app_users u on u.id = l.admin_user_id " +
+                        "order by l.created_at desc limit 100",
+                (rs, rowNum) -> new AdminAuditLogResponse(
+                        UUID.fromString(rs.getString("id")),
+                        nullableUuid(rs.getString("admin_user_id")),
+                        rs.getString("admin_username"),
+                        rs.getString("action"),
+                        rs.getString("target_type"),
+                        nullableUuid(rs.getString("target_id")),
+                        rs.getString("reason"),
+                        rs.getObject("created_at", OffsetDateTime.class)
+                )
+        );
+    }
+
+    public List<AdminUserSearchResponse> searchUsers(UUID adminUserId, String query) {
+        ensureAdmin(adminUserId);
+        String keyword = query == null ? "" : query.trim();
+        if (keyword.isEmpty()) {
+            return List.of();
+        }
+        String like = "%" + keyword.toLowerCase(Locale.ROOT) + "%";
+        return jdbcTemplate.query(
+                "select id, username, nickname, role, status from app_users " +
+                        "where lower(username) like ? or lower(coalesce(nickname, '')) like ? " +
+                        "order by case when lower(username) = ? then 0 when lower(username) like ? then 1 else 2 end, created_at desc limit 20",
+                (rs, rowNum) -> new AdminUserSearchResponse(
+                        UUID.fromString(rs.getString("id")),
+                        rs.getString("username"),
+                        rs.getString("nickname"),
+                        rs.getString("role"),
+                        rs.getString("status")
+                ),
+                like,
+                like,
+                keyword.toLowerCase(Locale.ROOT),
+                keyword.toLowerCase(Locale.ROOT) + "%"
         );
     }
 
@@ -175,6 +248,28 @@ public class AdminService {
         if (exists == null || exists == 0) {
             throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在");
         }
+    }
+
+    private String normalizeTradeSource(String source) {
+        String normalized = source == null ? "ALL" : source.trim().toUpperCase(Locale.ROOT);
+        if ("ALL".equals(normalized) || "MARKET".equals(normalized) || "PRIVATE".equals(normalized)) {
+            return normalized;
+        }
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "涓嶆敮鎸佺殑浜ゆ槗鏉ユ簮");
+    }
+
+    private String normalizeTradeStatus(String status) {
+        String normalized = status == null ? "ALL" : status.trim().toUpperCase(Locale.ROOT);
+        if ("ALL".equals(normalized)
+                || "COMPLETED".equals(normalized)
+                || "WAIT_ACCEPT".equals(normalized)
+                || "SETTLING".equals(normalized)
+                || "CANCELLED".equals(normalized)
+                || "EXPIRED".equals(normalized)
+                || "FAILED".equals(normalized)) {
+            return normalized;
+        }
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "涓嶆敮鎸佺殑浜ゆ槗鐘舵€?");
     }
 
     private void writeAuditLog(UUID adminUserId, String action, String targetType, UUID targetId, String reason) {

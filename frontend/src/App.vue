@@ -2,7 +2,7 @@
   <main class="shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark">穗</div>
+        <div class="brand-mark">农</div>
         <div>
           <p>Farm Exchange</p>
           <h1>{{ activeMode === 'player' ? '玩家农场' : '运营管理台' }}</h1>
@@ -31,8 +31,10 @@
         :is-logged-in="admin.isLoggedIn"
         :current-user="admin.currentUser"
         :loading="admin.loading"
-        @login="admin.login"
+        @login="loginAdmin"
         @refresh-console="loadAdminEverything"
+        @search-users="admin.searchUsers"
+        @select-user="selectAdminUser"
         @logout="admin.logout"
       />
 
@@ -48,6 +50,7 @@
         <a href="#token">令牌</a>
         <a href="#assets">资产</a>
         <a href="#trades">交易</a>
+        <a href="#audits">审计</a>
       </nav>
     </aside>
 
@@ -124,8 +127,19 @@ async function issueToken() {
   await admin.issueBulkToken(tokenForm)
 }
 
+async function loginAdmin() {
+  await admin.login()
+  await loadAdminEverything()
+}
+
+async function selectAdminUser(user) {
+  admin.selectTargetUser(user)
+  await admin.loadPlayerConsole()
+}
+
 async function loadAdminEverything() {
   await admin.loadTaxConfigs()
+  await admin.loadAuditLogs()
   if (admin.targetUserId) {
     await admin.loadPlayerConsole()
   }
@@ -145,6 +159,6 @@ watch(() => admin.taxConfigs, syncTaxForm, { deep: true })
 onMounted(() => {
   player.loadItems().catch(() => {})
   player.loadMe().catch(() => player.clearSession())
-  admin.loadMe().catch(() => admin.clearSession?.() || admin.logout())
+  admin.loadMe().then(loadAdminEverything).catch(() => admin.clearSession?.() || admin.logout())
 })
 </script>

@@ -63,8 +63,10 @@ public class PrivateTradeService {
         return new PrivateTradeResponse(offerId, sellerUserId, request.getBuyerUserId(), item.id, item.code, request.getQuantity(), request.getPriceAmount(), taxAmount, "WAIT_ACCEPT", expiresAt);
     }
 
+    @Transactional
     public List<PrivateTradeOfferResponse> offers(UUID userId) {
         ensureActiveUser(userId);
+        expirePendingOffersForUser(userId);
         return jdbcTemplate.query(
                 "select p.id, p.seller_user_id, seller.username as seller_username, p.buyer_user_id, buyer.username as buyer_username, " +
                         "p.item_id, i.code as item_code, p.quantity, p.price_amount, p.tax_amount, p.status, p.expires_at, p.accepted_at, p.cancelled_at, p.created_at " +
@@ -329,9 +331,31 @@ public class PrivateTradeService {
         }
     }
 
+    private void expirePendingOffersForUser(UUID userId) {
+        List<UUID> expiredOfferIds = jdbcTemplate.query(
+                "select id from private_trade_offers where status = 'WAIT_ACCEPT' and expires_at < now() and (seller_user_id = ? or buyer_user_id = ?)",
+                (rs, rowNum) -> UUID.fromString(rs.getString("id")),
+                userId,
+                userId
+        );
+        for (UUID offerId : expiredOfferIds) {
+            OfferSnapshot offer = lockOffer(offerId);
+            if ("WAIT_ACCEPT".equals(offer.status) && offer.expiresAt.isBefore(OffsetDateTime.now())) {
+                expireOffer(offer);
+            }
+        }
+    }
+
     private void expireOffer(OfferSnapshot offer) {
         releaseSellerInventory(offer.sellerUserId, offer.itemId, offer.quantity);
         jdbcTemplate.update("update private_trade_offers set status = 'EXPIRED', updated_at = now(), version = version + 1 where id = ?", offer.id);
+        jdbcTemplate.update(
+                "insert into asset_ledger (user_id, asset_type, item_id, change_amount, reason, ref_type, ref_id) values (?, 'ITEM', ?, ?, 'PRIVATE_TRADE_EXPIRE_RELEASE', 'PRIVATE_TRADE', ?)",
+                offer.sellerUserId,
+                offer.itemId,
+                offer.quantity,
+                offer.id
+        );
     }
 
     private void writeCoinLedger(UUID userId, long amount, long balanceAfter, String reason, UUID refId) {
