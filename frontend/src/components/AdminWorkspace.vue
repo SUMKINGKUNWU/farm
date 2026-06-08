@@ -136,7 +136,6 @@
 
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import * as echarts from 'echarts'
 import { useAdminStore } from '../stores/adminStore'
 import NoticeBlock from './common/NoticeBlock.vue'
 import StatCard from './common/StatCard.vue'
@@ -155,9 +154,18 @@ defineProps({
 const admin = useAdminStore()
 const chartEl = ref(null)
 let chart
+let echartsModulePromise
 
-function renderChart() {
+async function loadEcharts() {
+  if (!echartsModulePromise) {
+    echartsModulePromise = import('echarts')
+  }
+  return echartsModulePromise
+}
+
+async function renderChart() {
   if (!chartEl.value) return
+  const echarts = await loadEcharts()
   if (!chart) chart = echarts.init(chartEl.value)
   const rows = admin.trades.slice().reverse()
   chart.setOption({
