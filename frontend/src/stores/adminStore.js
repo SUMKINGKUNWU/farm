@@ -35,6 +35,31 @@ function defaultTradeResult() {
   }
 }
 
+function defaultAuditFilters() {
+  return {
+    action: 'ALL',
+    targetType: 'ALL',
+    page: 1,
+    pageSize: 10
+  }
+}
+
+function defaultAuditResult() {
+  return {
+    records: [],
+    total: 0,
+    page: 1,
+    pageSize: 10,
+    hasNext: false
+  }
+}
+
+function defaultAssetFilters() {
+  return {
+    itemType: 'ALL'
+  }
+}
+
 export const useAdminStore = defineStore('admin', {
   state: () => ({
     username: '',
@@ -44,11 +69,13 @@ export const useAdminStore = defineStore('admin', {
     targetUserId: '',
     userSearchQuery: '',
     userSearchResults: [],
+    assetFilters: defaultAssetFilters(),
     tradeFilters: defaultTradeFilters(),
+    auditFilters: defaultAuditFilters(),
     taxConfigs: [],
     assets: null,
     tradeResult: defaultTradeResult(),
-    auditLogs: [],
+    auditResult: defaultAuditResult(),
     issuedToken: null,
     loading: false,
     message: '',
@@ -98,8 +125,11 @@ export const useAdminStore = defineStore('admin', {
       this.accessToken = ''
       this.userSearchQuery = ''
       this.userSearchResults = []
+      this.assetFilters = defaultAssetFilters()
       this.tradeFilters = defaultTradeFilters()
+      this.auditFilters = defaultAuditFilters()
       this.tradeResult = defaultTradeResult()
+      this.auditResult = defaultAuditResult()
       localStorage.removeItem('farm_admin_token')
     },
     async run(task, successMessage) {
@@ -143,6 +173,7 @@ export const useAdminStore = defineStore('admin', {
       this.targetUserId = user?.userId || ''
       this.userSearchQuery = user?.username || ''
       this.tradeFilters.page = 1
+      this.auditFilters.page = 1
     },
     async login() {
       return this.run(async () => {
@@ -171,9 +202,11 @@ export const useAdminStore = defineStore('admin', {
       this.password = ''
       this.taxConfigs = []
       this.assets = null
+      this.assetFilters = defaultAssetFilters()
       this.tradeFilters = defaultTradeFilters()
+      this.auditFilters = defaultAuditFilters()
       this.tradeResult = defaultTradeResult()
-      this.auditLogs = []
+      this.auditResult = defaultAuditResult()
       this.issuedToken = null
       localStorage.removeItem('farm_admin_token')
       this.setMessage('已退出登录')
@@ -218,9 +251,16 @@ export const useAdminStore = defineStore('admin', {
         return this.issuedToken
       }, '大宗交易令牌已发放')
     },
-    async loadAssets() {
+    async loadAssets(overrides = {}) {
       return this.run(async () => {
-        this.assets = await requestJson(`/api/admin/users/${this.targetId()}/assets`, {
+        this.assetFilters = {
+          ...this.assetFilters,
+          ...overrides
+        }
+        const params = new URLSearchParams({
+          itemType: this.assetFilters.itemType
+        })
+        this.assets = await requestJson(`/api/admin/users/${this.targetId()}/assets?${params.toString()}`, {
           headers: this.authHeaders()
         })
         return this.assets
@@ -244,17 +284,28 @@ export const useAdminStore = defineStore('admin', {
         return this.tradeResult
       }, '交易记录已刷新')
     },
-    async loadAuditLogs() {
+    async loadAuditLogs(overrides = {}) {
       return this.run(async () => {
-        this.auditLogs = await requestJson('/api/admin/audit-logs', {
+        this.auditFilters = {
+          ...this.auditFilters,
+          ...overrides
+        }
+        const params = new URLSearchParams({
+          action: this.auditFilters.action,
+          targetType: this.auditFilters.targetType,
+          page: String(this.auditFilters.page),
+          pageSize: String(this.auditFilters.pageSize)
+        })
+        this.auditResult = await requestJson(`/api/admin/audit-logs?${params.toString()}`, {
           headers: this.authHeaders()
         })
-        return this.auditLogs
+        return this.auditResult
       }, '审计日志已刷新')
     },
     async loadPlayerConsole() {
       await this.loadAssets()
       await this.loadTrades({ page: 1 })
+      await this.loadAuditLogs({ page: 1 })
     }
   }
 })

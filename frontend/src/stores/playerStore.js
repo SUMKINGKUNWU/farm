@@ -16,6 +16,34 @@ async function requestJson(url, options = {}) {
   return body
 }
 
+function defaultTradeActivityFilters() {
+  return {
+    source: 'ALL',
+    status: 'ALL',
+    page: 1,
+    pageSize: 10
+  }
+}
+
+function defaultLedgerActivityFilters() {
+  return {
+    assetType: 'ALL',
+    direction: 'ALL',
+    page: 1,
+    pageSize: 10
+  }
+}
+
+function defaultPagedResult() {
+  return {
+    records: [],
+    total: 0,
+    page: 1,
+    pageSize: 10,
+    hasNext: false
+  }
+}
+
 export const usePlayerStore = defineStore('player', {
   state: () => ({
     username: '',
@@ -32,8 +60,10 @@ export const usePlayerStore = defineStore('player', {
     quote: null,
     bulkTokens: [],
     privateTrades: [],
-    tradeHistory: [],
-    ledgerEntries: [],
+    tradeHistory: defaultPagedResult(),
+    ledgerEntries: defaultPagedResult(),
+    tradeActivityFilters: defaultTradeActivityFilters(),
+    ledgerActivityFilters: defaultLedgerActivityFilters(),
     lastProduction: null,
     lastTrade: null,
     loading: false,
@@ -151,8 +181,10 @@ export const usePlayerStore = defineStore('player', {
       this.growthInstances = []
       this.bulkTokens = []
       this.privateTrades = []
-      this.tradeHistory = []
-      this.ledgerEntries = []
+      this.tradeHistory = defaultPagedResult()
+      this.ledgerEntries = defaultPagedResult()
+      this.tradeActivityFilters = defaultTradeActivityFilters()
+      this.ledgerActivityFilters = defaultLedgerActivityFilters()
       this.lastProduction = null
       this.lastTrade = null
       this.setMessage('已退出玩家账号')
@@ -293,12 +325,34 @@ export const usePlayerStore = defineStore('player', {
         await this.loadDashboard()
       }, '私下交易报价已取消')
     },
-    async loadActivity() {
+    async loadActivity(overrides = {}) {
       return this.run(async () => {
         const headers = this.authHeaders()
+        this.tradeActivityFilters = {
+          ...this.tradeActivityFilters,
+          ...(overrides.trade || {})
+        }
+        this.ledgerActivityFilters = {
+          ...this.ledgerActivityFilters,
+          ...(overrides.ledger || {})
+        }
+
+        const tradeParams = new URLSearchParams({
+          source: this.tradeActivityFilters.source,
+          status: this.tradeActivityFilters.status,
+          page: String(this.tradeActivityFilters.page),
+          pageSize: String(this.tradeActivityFilters.pageSize)
+        })
+        const ledgerParams = new URLSearchParams({
+          assetType: this.ledgerActivityFilters.assetType,
+          direction: this.ledgerActivityFilters.direction,
+          page: String(this.ledgerActivityFilters.page),
+          pageSize: String(this.ledgerActivityFilters.pageSize)
+        })
+
         const [tradeHistory, ledgerEntries] = await Promise.all([
-          requestJson('/api/me/trades', { headers }),
-          requestJson('/api/me/ledger', { headers })
+          requestJson(`/api/me/trades?${tradeParams.toString()}`, { headers }),
+          requestJson(`/api/me/ledger?${ledgerParams.toString()}`, { headers })
         ])
         this.tradeHistory = tradeHistory
         this.ledgerEntries = ledgerEntries

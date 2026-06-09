@@ -5,36 +5,125 @@
         <span class="section-kicker">Audit Trail</span>
         <h3>审计日志</h3>
       </div>
-      <button class="button ghost" type="button" :disabled="loading" @click="emit('load-audit-logs')">
+      <button class="button ghost" type="button" :disabled="loading" @click="refreshCurrentPage">
         刷新日志
       </button>
     </div>
+
+    <div class="toolbar-row">
+      <label>
+        动作
+        <select v-model="draftFilters.action">
+          <option value="ALL">全部</option>
+          <option value="UPDATE_TAX_CONFIG">更新税率</option>
+          <option value="ISSUE_BULK_TOKEN">发放令牌</option>
+        </select>
+      </label>
+      <label>
+        目标
+        <select v-model="draftFilters.targetType">
+          <option value="ALL">全部</option>
+          <option value="TAX_CONFIG">税率配置</option>
+          <option value="APP_USER">玩家</option>
+        </select>
+      </label>
+      <label>
+        每页
+        <select v-model.number="draftFilters.pageSize">
+          <option :value="10">10</option>
+          <option :value="20">20</option>
+          <option :value="50">50</option>
+        </select>
+      </label>
+      <button class="button subtle" type="button" :disabled="loading" @click="applyFilters">
+        应用筛选
+      </button>
+    </div>
+
+    <div class="table-meta">
+      <span>共 {{ auditResult.total }} 条</span>
+      <span>第 {{ auditResult.page }} / {{ totalPages }} 页</span>
+    </div>
+
     <div class="table-wrap">
       <table>
         <thead>
           <tr><th>时间</th><th>管理员</th><th>动作</th><th>目标</th><th>原因</th></tr>
         </thead>
         <tbody>
-          <tr v-for="entry in auditLogs" :key="entry.auditId">
+          <tr v-for="entry in auditResult.records" :key="entry.auditId">
             <td>{{ formatDate(entry.createdAt) }}</td>
             <td>{{ entry.adminUsername || '-' }}<small>{{ entry.adminUserId || '-' }}</small></td>
             <td>{{ entry.action }}</td>
             <td>{{ entry.targetType || '-' }}<small>{{ entry.targetId || '-' }}</small></td>
             <td>{{ entry.reason || '-' }}</td>
           </tr>
-          <tr v-if="!auditLogs.length"><td colspan="5">暂无审计日志</td></tr>
+          <tr v-if="!auditResult.records.length"><td colspan="5">暂无审计日志</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="pager-row">
+      <button class="button ghost" type="button" :disabled="loading || auditResult.page <= 1" @click="goPrev">
+        上一页
+      </button>
+      <button class="button ghost" type="button" :disabled="loading || !auditResult.hasNext" @click="goNext">
+        下一页
+      </button>
     </div>
   </section>
 </template>
 
 <script setup>
-defineProps({
-  auditLogs: { type: Array, required: true },
+import { computed, reactive, watch } from 'vue'
+
+const props = defineProps({
+  auditResult: { type: Object, required: true },
+  auditFilters: { type: Object, required: true },
   loading: { type: Boolean, required: true },
   formatDate: { type: Function, required: true }
 })
 
 const emit = defineEmits(['load-audit-logs'])
+const draftFilters = reactive({
+  action: 'ALL',
+  targetType: 'ALL',
+  pageSize: 10
+})
+
+const totalPages = computed(() => {
+  const size = Math.max(Number(props.auditResult.pageSize || props.auditFilters.pageSize || 10), 1)
+  return Math.max(1, Math.ceil(Number(props.auditResult.total || 0) / size))
+})
+
+watch(
+  () => props.auditFilters,
+  (filters) => {
+    draftFilters.action = filters.action
+    draftFilters.targetType = filters.targetType
+    draftFilters.pageSize = filters.pageSize
+  },
+  { deep: true, immediate: true }
+)
+
+function applyFilters() {
+  emit('load-audit-logs', {
+    action: draftFilters.action,
+    targetType: draftFilters.targetType,
+    pageSize: draftFilters.pageSize,
+    page: 1
+  })
+}
+
+function refreshCurrentPage() {
+  emit('load-audit-logs', { page: props.auditResult.page })
+}
+
+function goPrev() {
+  emit('load-audit-logs', { page: props.auditResult.page - 1 })
+}
+
+function goNext() {
+  emit('load-audit-logs', { page: props.auditResult.page + 1 })
+}
 </script>

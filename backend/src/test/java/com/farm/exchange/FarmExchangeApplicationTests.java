@@ -1109,19 +1109,45 @@ class FarmExchangeApplicationTests {
         mockMvc.perform(get("/api/me/trades")
                         .header("Authorization", "Bearer " + sellerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].tradeSource").value("PRIVATE"))
-                .andExpect(jsonPath("$[0].status").value("CANCELLED"))
-                .andExpect(jsonPath("$[0].counterpartyUserId").value(buyerId))
-                .andExpect(jsonPath("$[1].tradeSource").value("MARKET"))
-                .andExpect(jsonPath("$[1].side").value("SELL"));
+                .andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.records.length()").value(2))
+                .andExpect(jsonPath("$.records[0].tradeSource").value("PRIVATE"))
+                .andExpect(jsonPath("$.records[0].status").value("CANCELLED"))
+                .andExpect(jsonPath("$.records[0].counterpartyUserId").value(buyerId))
+                .andExpect(jsonPath("$.records[1].tradeSource").value("MARKET"))
+                .andExpect(jsonPath("$.records[1].side").value("SELL"));
+
+        mockMvc.perform(get("/api/me/trades")
+                        .header("Authorization", "Bearer " + sellerToken)
+                        .param("source", "PRIVATE")
+                        .param("status", "CANCELLED")
+                        .param("page", "1")
+                        .param("pageSize", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.pageSize").value(1))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.records[0].tradeSource").value("PRIVATE"));
 
         mockMvc.perform(get("/api/me/ledger")
                         .header("Authorization", "Bearer " + sellerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].assetType").value("ITEM"))
-                .andExpect(jsonPath("$[0].reason").value("PRIVATE_TRADE_RELEASE"))
-                .andExpect(jsonPath("$[1].reason").value("PRIVATE_TRADE_LOCK"));
+                .andExpect(jsonPath("$.total").value(5))
+                .andExpect(jsonPath("$.records[0].assetType").value("ITEM"))
+                .andExpect(jsonPath("$.records[0].reason").value("PRIVATE_TRADE_RELEASE"))
+                .andExpect(jsonPath("$.records[1].reason").value("PRIVATE_TRADE_LOCK"));
+
+        mockMvc.perform(get("/api/me/ledger")
+                        .header("Authorization", "Bearer " + sellerToken)
+                        .param("assetType", "ITEM")
+                        .param("direction", "IN")
+                        .param("page", "1")
+                        .param("pageSize", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.records.length()").value(1))
+                .andExpect(jsonPath("$.records[0].reason").value("PRIVATE_TRADE_RELEASE"));
 
         Integer marketSellLedgerCount = jdbcTemplate.queryForObject(
                 "select count(*) from asset_ledger where user_id = ?::uuid and reason = 'MARKET_SELL'",
@@ -1236,6 +1262,12 @@ class FarmExchangeApplicationTests {
                 .andExpect(jsonPath("$.inventory[0].itemCode").value("CORN"))
                 .andExpect(jsonPath("$.inventory[1].itemCode").value("WHEAT"));
 
+        mockMvc.perform(get("/api/admin/users/" + playerId + "/assets")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("itemType", "HARVEST"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.inventory.length()").value(2));
+
         mockMvc.perform(get("/api/admin/users/search")
                         .header("Authorization", "Bearer " + adminToken)
                         .param("q", playerUsername.substring(0, 8)))
@@ -1267,8 +1299,21 @@ class FarmExchangeApplicationTests {
         mockMvc.perform(get("/api/admin/audit-logs")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].action").value("ISSUE_BULK_TOKEN"))
-                .andExpect(jsonPath("$[1].action").value("UPDATE_TAX_CONFIG"));
+                .andExpect(jsonPath("$.records[0].action").value("ISSUE_BULK_TOKEN"))
+                .andExpect(jsonPath("$.records[1].action").value("UPDATE_TAX_CONFIG"))
+                .andExpect(jsonPath("$.hasNext").value(true));
+
+        mockMvc.perform(get("/api/admin/audit-logs")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("action", "ISSUE_BULK_TOKEN")
+                        .param("targetType", "APP_USER")
+                        .param("page", "1")
+                        .param("pageSize", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.records.length()").value(1))
+                .andExpect(jsonPath("$.records[0].action").value("ISSUE_BULK_TOKEN"))
+                .andExpect(jsonPath("$.records[0].targetType").value("APP_USER"))
+                .andExpect(jsonPath("$.hasNext").value(true));
 
         Integer auditCount = jdbcTemplate.queryForObject(
                 "select count(*) from admin_audit_logs where admin_user_id = ?::uuid and action in ('UPDATE_TAX_CONFIG', 'ISSUE_BULK_TOKEN')",

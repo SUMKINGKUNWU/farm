@@ -47,9 +47,12 @@ public class AdminController {
     }
 
     @GetMapping("/users/{targetUserId}/assets")
-    public AdminUserAssetResponse userAssets(@RequestHeader(value = "Authorization", required = false) String authorization, @PathVariable UUID targetUserId) {
+    public AdminUserAssetResponse userAssets(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable UUID targetUserId,
+            @RequestParam(value = "itemType", defaultValue = "ALL") String itemType) {
         AuthPrincipal admin = authTokenService.require(authorization);
-        return adminService.userAssets(admin.getUserId(), targetUserId);
+        return adminService.userAssets(admin.getUserId(), targetUserId, itemType);
     }
 
     @GetMapping("/users/{targetUserId}/trades")
@@ -65,9 +68,14 @@ public class AdminController {
     }
 
     @GetMapping("/audit-logs")
-    public List<AdminAuditLogResponse> auditLogs(@RequestHeader(value = "Authorization", required = false) String authorization) {
+    public AdminAuditLogQueryResponse auditLogs(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(value = "action", defaultValue = "ALL") String action,
+            @RequestParam(value = "targetType", defaultValue = "ALL") String targetType,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
         AuthPrincipal admin = authTokenService.require(authorization);
-        return adminService.auditLogs(admin.getUserId());
+        return adminService.auditLogs(admin.getUserId(), action, targetType, page, pageSize);
     }
 
     @GetMapping("/users/search")

@@ -2,7 +2,9 @@ package com.farm.exchange.me;
 
 import com.farm.exchange.activity.PlayerActivityService;
 import com.farm.exchange.activity.PlayerLedgerEntryResponse;
+import com.farm.exchange.activity.PlayerLedgerQueryResponse;
 import com.farm.exchange.activity.PlayerTradeRecordResponse;
+import com.farm.exchange.activity.PlayerTradeQueryResponse;
 import com.farm.exchange.auth.AuthPrincipal;
 import com.farm.exchange.auth.AuthTokenService;
 import com.farm.exchange.bulk.BulkTokenResponse;
@@ -183,13 +185,23 @@ public class MeController {
     }
 
     @GetMapping("/trades")
-    public List<PlayerTradeRecordResponse> trades(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        return playerActivityService.trades(currentUserId(authorization));
+    public PlayerTradeQueryResponse trades(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(value = "source", defaultValue = "ALL") String source,
+            @RequestParam(value = "status", defaultValue = "ALL") String status,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+        return playerActivityService.trades(currentUserId(authorization), source, status, page, pageSize);
     }
 
     @GetMapping("/ledger")
-    public List<PlayerLedgerEntryResponse> ledger(@RequestHeader(value = "Authorization", required = false) String authorization) {
-        return playerActivityService.ledger(currentUserId(authorization));
+    public PlayerLedgerQueryResponse ledger(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(value = "assetType", defaultValue = "ALL") String assetType,
+            @RequestParam(value = "direction", defaultValue = "ALL") String direction,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
+        return playerActivityService.ledger(currentUserId(authorization), assetType, direction, page, pageSize);
     }
 
     private UUID currentUserId(String authorization) {

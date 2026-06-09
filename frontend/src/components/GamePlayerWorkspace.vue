@@ -90,10 +90,14 @@
           :active-tab="activeTab"
           :trade-history="player.tradeHistory"
           :ledger-entries="player.ledgerEntries"
+          :trade-filters="player.tradeActivityFilters"
+          :ledger-filters="player.ledgerActivityFilters"
           :loading="player.loading"
           :format-money="formatMoney"
           :format-date="formatDate"
           @refresh-activity="player.loadActivity"
+          @change-trade-filters="changeTradeFilters"
+          @change-ledger-filters="changeLedgerFilters"
         />
       </div>
 
@@ -184,7 +188,7 @@ const navItems = [
 
 async function setActiveTab(tab) {
   activeTab.value = tab
-  if (tab === 'records' && !player.tradeHistory.length && !player.ledgerEntries.length) {
+  if (tab === 'records' && !player.tradeHistory.records.length && !player.ledgerEntries.records.length) {
     await player.loadActivity()
   }
 }
@@ -303,5 +307,13 @@ async function acceptPrivateTrade(offerId) {
     tradePassword: forms.privateAcceptPassword,
     bulkTokenCode: forms.privateBulkTokenCode || null
   })
+}
+
+async function changeTradeFilters(filters) {
+  await player.loadActivity({ trade: filters })
+}
+
+async function changeLedgerFilters(filters) {
+  await player.loadActivity({ ledger: filters })
 }
 </script>

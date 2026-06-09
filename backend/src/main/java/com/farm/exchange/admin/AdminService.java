@@ -17,6 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminService {
 
+    private static final List<String> ALLOWED_ITEM_TYPES = List.of("SEED", "ANIMAL", "FEED", "HARVEST", "TOKEN", "CONSUMABLE");
+    private static final List<String> ALLOWED_AUDIT_ACTIONS = List.of("UPDATE_TAX_CONFIG", "ISSUE_BULK_TOKEN");
+    private static final List<String> ALLOWED_AUDIT_TARGET_TYPES = List.of("TAX_CONFIG", "APP_USER");
+
     private final JdbcTemplate jdbcTemplate;
     private final BulkTokenService bulkTokenService;
 
@@ -70,12 +74,24 @@ public class AdminService {
         return response;
     }
 
-    public AdminUserAssetResponse userAssets(UUID adminUserId, UUID targetUserId) {
+    public AdminUserAssetResponse userAssets(UUID adminUserId, UUID targetUserId, String itemType) {
         ensureAdmin(adminUserId);
         UserAssetHeader header = userAssetHeader(targetUserId);
-        List<AdminInventoryItemResponse> inventory = jdbcTemplate.query(
+        String normalizedItemType = normalizeItemType(itemType);
+
+        String inventorySql =
                 "select i.id, i.code, i.name, i.item_type, pi.available_quantity, pi.locked_quantity " +
-                        "from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ? order by i.item_type, i.code",
+                        "from player_inventory pi join items i on i.id = pi.item_id where pi.user_id = ?";
+        List<Object> params = new ArrayList<>();
+        params.add(targetUserId);
+        if (!"ALL".equals(normalizedItemType)) {
+            inventorySql += " and i.item_type = ?";
+            params.add(normalizedItemType);
+        }
+        inventorySql += " order by i.item_type, i.code";
+
+        List<AdminInventoryItemResponse> inventory = jdbcTemplate.query(
+                inventorySql,
                 (rs, rowNum) -> new AdminInventoryItemResponse(
                         UUID.fromString(rs.getString("id")),
                         rs.getString("code"),
@@ -84,7 +100,7 @@ public class AdminService {
                         rs.getLong("available_quantity"),
                         rs.getLong("locked_quantity")
                 ),
-                targetUserId
+                params.toArray()
         );
         return new AdminUserAssetResponse(header.userId, header.username, header.nickname, header.status, header.balance, header.lockedBalance, inventory);
     }
@@ -147,12 +163,35 @@ public class AdminService {
         return new AdminTradeQueryResponse(records, totalCount, safePage, safePageSize, offset + records.size() < totalCount);
     }
 
-    public List<AdminAuditLogResponse> auditLogs(UUID adminUserId) {
+    public AdminAuditLogQueryResponse auditLogs(UUID adminUserId, String action, String targetType, int page, int pageSize) {
         ensureAdmin(adminUserId);
-        return jdbcTemplate.query(
+        String normalizedAction = normalizeAuditAction(action);
+        String normalizedTargetType = normalizeAuditTargetType(targetType);
+        int safePage = Math.max(page, 1);
+        int safePageSize = Math.min(Math.max(pageSize, 1), 50);
+        int offset = (safePage - 1) * safePageSize;
+
+        String filteredSql =
+                "from admin_audit_logs l left join app_users u on u.id = l.admin_user_id where 1 = 1";
+        List<Object> filters = new ArrayList<>();
+        if (!"ALL".equals(normalizedAction)) {
+            filteredSql += " and l.action = ?";
+            filters.add(normalizedAction);
+        }
+        if (!"ALL".equals(normalizedTargetType)) {
+            filteredSql += " and l.target_type = ?";
+            filters.add(normalizedTargetType);
+        }
+
+        Long total = jdbcTemplate.queryForObject("select count(*) " + filteredSql, Long.class, filters.toArray());
+
+        List<Object> queryParams = new ArrayList<>(filters);
+        queryParams.add(safePageSize);
+        queryParams.add(offset);
+        List<AdminAuditLogResponse> records = jdbcTemplate.query(
                 "select l.id, l.admin_user_id, u.username as admin_username, l.action, l.target_type, l.target_id, l.reason, l.created_at " +
-                        "from admin_audit_logs l left join app_users u on u.id = l.admin_user_id " +
-                        "order by l.created_at desc limit 100",
+                        filteredSql +
+                        " order by l.created_at desc limit ? offset ?",
                 (rs, rowNum) -> new AdminAuditLogResponse(
                         UUID.fromString(rs.getString("id")),
                         nullableUuid(rs.getString("admin_user_id")),
@@ -162,8 +201,11 @@ public class AdminService {
                         nullableUuid(rs.getString("target_id")),
                         rs.getString("reason"),
                         rs.getObject("created_at", OffsetDateTime.class)
-                )
+                ),
+                queryParams.toArray()
         );
+        long totalCount = total == null ? 0L : total;
+        return new AdminAuditLogQueryResponse(records, totalCount, safePage, safePageSize, offset + records.size() < totalCount);
     }
 
     public List<AdminUserSearchResponse> searchUsers(UUID adminUserId, String query) {
@@ -255,7 +297,7 @@ public class AdminService {
         if ("ALL".equals(normalized) || "MARKET".equals(normalized) || "PRIVATE".equals(normalized)) {
             return normalized;
         }
-        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "涓嶆敮鎸佺殑浜ゆ槗鏉ユ簮");
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的交易来源");
     }
 
     private String normalizeTradeStatus(String status) {
@@ -269,7 +311,31 @@ public class AdminService {
                 || "FAILED".equals(normalized)) {
             return normalized;
         }
-        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "涓嶆敮鎸佺殑浜ゆ槗鐘舵€?");
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的交易状态");
+    }
+
+    private String normalizeItemType(String itemType) {
+        String normalized = itemType == null ? "ALL" : itemType.trim().toUpperCase(Locale.ROOT);
+        if ("ALL".equals(normalized) || ALLOWED_ITEM_TYPES.contains(normalized)) {
+            return normalized;
+        }
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的物品类型");
+    }
+
+    private String normalizeAuditAction(String action) {
+        String normalized = action == null ? "ALL" : action.trim().toUpperCase(Locale.ROOT);
+        if ("ALL".equals(normalized) || ALLOWED_AUDIT_ACTIONS.contains(normalized)) {
+            return normalized;
+        }
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的审计动作");
+    }
+
+    private String normalizeAuditTargetType(String targetType) {
+        String normalized = targetType == null ? "ALL" : targetType.trim().toUpperCase(Locale.ROOT);
+        if ("ALL".equals(normalized) || ALLOWED_AUDIT_TARGET_TYPES.contains(normalized)) {
+            return normalized;
+        }
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的审计目标类型");
     }
 
     private void writeAuditLog(UUID adminUserId, String action, String targetType, UUID targetId, String reason) {

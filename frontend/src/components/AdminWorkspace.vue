@@ -32,6 +32,7 @@
     />
     <PlayerAssetsPanel
       :assets="admin.assets"
+      :asset-filters="admin.assetFilters"
       :loading="admin.loading"
       :format-money="formatMoney"
       @load-assets="admin.loadAssets"
@@ -45,7 +46,8 @@
       @load-trades="admin.loadTrades"
     />
     <AuditLogPanel
-      :audit-logs="admin.auditLogs"
+      :audit-result="admin.auditResult"
+      :audit-filters="admin.auditFilters"
       :loading="admin.loading"
       :format-date="formatDate"
       @load-audit-logs="admin.loadAuditLogs"
