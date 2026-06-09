@@ -16,7 +16,7 @@
         <select v-model="draftFilters.action">
           <option value="ALL">全部</option>
           <option v-for="option in actionOptions" :key="option" :value="option">
-            {{ actionLabel(option) }}
+            {{ adminAuditActionLabel(option) }}
           </option>
         </select>
       </label>
@@ -25,7 +25,7 @@
         <select v-model="draftFilters.targetType">
           <option value="ALL">全部</option>
           <option v-for="option in targetTypeOptions" :key="option" :value="option">
-            {{ targetTypeLabel(option) }}
+            {{ adminAuditTargetTypeLabel(option) }}
           </option>
         </select>
       </label>
@@ -91,8 +91,8 @@
           <tr v-for="entry in auditResult.records" :key="entry.auditId">
             <td>{{ formatDate(entry.createdAt) }}</td>
             <td>{{ entry.adminUsername || '-' }}<small>{{ entry.adminUserId || '-' }}</small></td>
-            <td>{{ actionLabel(entry.action) }}</td>
-            <td>{{ targetTypeLabel(entry.targetType) }}<small>{{ entry.targetId || '-' }}</small></td>
+            <td>{{ adminAuditActionLabel(entry.action) }}</td>
+            <td>{{ adminAuditTargetTypeLabel(entry.targetType) }}<small>{{ entry.targetId || '-' }}</small></td>
             <td>{{ entry.reason || '-' }}</td>
           </tr>
           <tr v-if="!auditResult.records.length">
@@ -122,6 +122,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
+import { adminAuditActionLabel, adminAuditTargetTypeLabel } from '../../utils/adminLabels'
 
 const props = defineProps({
   auditResult: { type: Object, required: true },
@@ -161,18 +162,6 @@ const reasonOptions = computed(() => props.auditFilterOptions.reasonOptions || [
 const selectedReasonOption = computed(() => {
   return reasonOptions.value.includes(draftFilters.reason) ? draftFilters.reason : ''
 })
-
-function actionLabel(value) {
-  if (value === 'UPDATE_TAX_CONFIG') return '更新税率'
-  if (value === 'ISSUE_BULK_TOKEN') return '发放令牌'
-  return value
-}
-
-function targetTypeLabel(value) {
-  if (value === 'TAX_CONFIG') return '税率配置'
-  if (value === 'APP_USER') return '玩家'
-  return value
-}
 
 watch(
   () => props.auditFilters,

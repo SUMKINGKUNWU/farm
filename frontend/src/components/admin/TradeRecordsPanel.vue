@@ -36,7 +36,7 @@
         <select :value="selectedReasonOption" @change="applyReasonOption($event.target.value)">
           <option value="ALL">全部</option>
           <option v-for="option in reasonOptions" :key="option" :value="option">
-            {{ reasonLabel(option) }}
+            {{ adminTradeReasonLabel(option) }}
           </option>
         </select>
       </label>
@@ -78,14 +78,14 @@
         <tbody>
           <tr v-for="trade in tradeResult.records" :key="trade.tradeId">
             <td>{{ formatDate(trade.createdAt) }}</td>
-            <td>{{ tradeSourceLabel(trade.tradeSource) }}</td>
-            <td>{{ sideLabel(trade.side) }}</td>
+            <td>{{ adminTradeSourceLabel(trade.tradeSource) }}</td>
+            <td>{{ adminTradeSideLabel(trade.side) }}</td>
             <td>{{ trade.itemCode }}</td>
             <td>{{ trade.quantity }}</td>
             <td>{{ formatMoney(trade.tradeAmount) }}</td>
             <td>{{ formatMoney(trade.taxAmount) }}</td>
-            <td>{{ reasonLabel(trade.tradeReason) }}</td>
-            <td>{{ statusLabel(trade.status) }}</td>
+            <td>{{ adminTradeReasonLabel(trade.tradeReason) }}</td>
+            <td>{{ adminTradeStatusLabel(trade.status) }}</td>
           </tr>
           <tr v-if="!tradeResult.records.length">
             <td colspan="9">暂无交易记录</td>
@@ -107,6 +107,12 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import {
+  adminTradeReasonLabel,
+  adminTradeSideLabel,
+  adminTradeSourceLabel,
+  adminTradeStatusLabel
+} from '../../utils/adminLabels'
 
 const props = defineProps({
   tradeResult: { type: Object, required: true },
@@ -198,39 +204,6 @@ async function renderChart() {
       }
     ]
   })
-}
-
-function tradeSourceLabel(value) {
-  if (value === 'MARKET') return '交易站'
-  if (value === 'PRIVATE') return '私下交易'
-  return value
-}
-
-function sideLabel(value) {
-  if (value === 'BUY') return '买入'
-  if (value === 'SELL') return '卖出'
-  return value
-}
-
-function statusLabel(value) {
-  if (value === 'COMPLETED') return '已完成'
-  if (value === 'WAIT_ACCEPT') return '待接受'
-  if (value === 'SETTLING') return '结算中'
-  if (value === 'CANCELLED') return '已取消'
-  if (value === 'EXPIRED') return '已过期'
-  if (value === 'FAILED') return '失败'
-  return value
-}
-
-function reasonLabel(value) {
-  if (value === 'MARKET_BUY') return '交易站买入'
-  if (value === 'MARKET_SELL') return '交易站卖出'
-  if (value === 'PRIVATE_TRADE_CREATE') return '私下交易创建'
-  if (value === 'PRIVATE_TRADE_ACCEPT') return '私下交易成交'
-  if (value === 'PRIVATE_TRADE_CANCEL') return '私下交易取消'
-  if (value === 'PRIVATE_TRADE_EXPIRE') return '私下交易过期'
-  if (value === 'PRIVATE_TRADE_UPDATE') return '私下交易更新'
-  return value || '-'
 }
 
 function applyReasonOption(value) {
