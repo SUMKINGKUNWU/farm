@@ -13,8 +13,8 @@
     <div class="asset-summary player-activity-summary">
       <StatCard label="交易记录" :value="tradeHistory.total" />
       <StatCard label="资产流水" :value="ledgerEntries.total" />
-      <StatCard label="最新成交" :value="tradeHistory.records[0]?.tradeSource || '-'" />
-      <StatCard label="最新流水" :value="ledgerEntries.records[0]?.assetType || '-'" />
+      <StatCard label="最新成交" :value="playerTradeSourceLabel(tradeHistory.records[0]?.tradeSource)" />
+      <StatCard label="最新流水" :value="playerAssetTypeLabel(ledgerEntries.records[0]?.assetType)" />
     </div>
 
     <div class="records-grid">
@@ -44,7 +44,9 @@
             交易原因
             <select v-model="tradeDraft.reason">
               <option value="ALL">全部</option>
-              <option v-for="reason in tradeReasonOptions" :key="reason" :value="reason">{{ reason }}</option>
+              <option v-for="reason in tradeReasonOptions" :key="reason" :value="reason">
+                {{ playerTradeReasonLabel(reason) }}
+              </option>
             </select>
           </label>
           <label>
@@ -68,20 +70,31 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>时间</th><th>来源</th><th>方向</th><th>商品</th><th>数量</th><th>金额</th><th>税费</th><th>原因</th><th>对手方</th><th>状态</th></tr>
+              <tr>
+                <th>时间</th>
+                <th>来源</th>
+                <th>方向</th>
+                <th>商品</th>
+                <th>数量</th>
+                <th>金额</th>
+                <th>税费</th>
+                <th>原因</th>
+                <th>对手方</th>
+                <th>状态</th>
+              </tr>
             </thead>
             <tbody>
               <tr v-for="trade in tradeHistory.records" :key="trade.tradeId">
                 <td>{{ formatDate(trade.createdAt) }}</td>
-                <td>{{ trade.tradeSource }}</td>
-                <td>{{ trade.side }}</td>
+                <td>{{ playerTradeSourceLabel(trade.tradeSource) }}</td>
+                <td>{{ playerTradeSideLabel(trade.side) }}</td>
                 <td>{{ trade.itemCode }}</td>
                 <td>{{ trade.quantity }}</td>
                 <td>{{ formatMoney(trade.tradeAmount) }}</td>
                 <td>{{ formatMoney(trade.taxAmount) }}</td>
-                <td>{{ trade.tradeReason }}</td>
+                <td>{{ playerTradeReasonLabel(trade.tradeReason) }}</td>
                 <td>{{ trade.counterpartyUsername || '-' }}<small>{{ trade.counterpartyUserId || '-' }}</small></td>
-                <td>{{ trade.status }}</td>
+                <td>{{ playerTradeStatusLabel(trade.status) }}</td>
               </tr>
               <tr v-if="!tradeHistory.records.length"><td colspan="10">暂无交易记录</td></tr>
             </tbody>
@@ -128,7 +141,9 @@
             流水原因
             <select v-model="ledgerDraft.reason">
               <option value="ALL">全部</option>
-              <option v-for="reason in ledgerReasonOptions" :key="reason" :value="reason">{{ reason }}</option>
+              <option v-for="reason in ledgerReasonOptions" :key="reason" :value="reason">
+                {{ playerLedgerReasonLabel(reason) }}
+              </option>
             </select>
           </label>
           <label>
@@ -157,13 +172,13 @@
             <tbody>
               <tr v-for="entry in ledgerEntries.records" :key="entry.ledgerId">
                 <td>{{ formatDate(entry.createdAt) }}</td>
-                <td>{{ entry.assetType }}</td>
+                <td>{{ playerAssetTypeLabel(entry.assetType) }}</td>
                 <td>{{ entry.itemCode || '-' }}</td>
                 <td :class="entry.changeAmount >= 0 ? 'delta-up' : 'delta-down'">
                   {{ entry.changeAmount > 0 ? `+${entry.changeAmount}` : entry.changeAmount }}
                 </td>
                 <td>{{ formatMoney(entry.balanceAfter) }}</td>
-                <td>{{ entry.reason }}</td>
+                <td>{{ playerLedgerReasonLabel(entry.reason) }}</td>
               </tr>
               <tr v-if="!ledgerEntries.records.length"><td colspan="6">暂无资产流水</td></tr>
             </tbody>
@@ -193,6 +208,14 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import StatCard from '../common/StatCard.vue'
+import {
+  playerAssetTypeLabel,
+  playerLedgerReasonLabel,
+  playerTradeReasonLabel,
+  playerTradeSideLabel,
+  playerTradeSourceLabel,
+  playerTradeStatusLabel
+} from '../../utils/playerLabels'
 
 const props = defineProps({
   activeTab: { type: String, required: true },
