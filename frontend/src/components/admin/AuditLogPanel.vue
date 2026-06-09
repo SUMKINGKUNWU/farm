@@ -91,8 +91,8 @@
           <tr v-for="entry in auditResult.records" :key="entry.auditId">
             <td>{{ formatDate(entry.createdAt) }}</td>
             <td>{{ entry.adminUsername || '-' }}<small>{{ entry.adminUserId || '-' }}</small></td>
-            <td>{{ entry.action }}</td>
-            <td>{{ entry.targetType || '-' }}<small>{{ entry.targetId || '-' }}</small></td>
+            <td>{{ actionLabel(entry.action) }}</td>
+            <td>{{ targetTypeLabel(entry.targetType) }}<small>{{ entry.targetId || '-' }}</small></td>
             <td>{{ entry.reason || '-' }}</td>
           </tr>
           <tr v-if="!auditResult.records.length">
