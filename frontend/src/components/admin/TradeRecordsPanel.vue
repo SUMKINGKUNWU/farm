@@ -51,6 +51,9 @@
       <button class="button subtle" type="button" :disabled="loading" @click="applyFilters">
         应用筛选
       </button>
+      <button class="button ghost" type="button" :disabled="loading" @click="resetFilters">
+        重置交易
+      </button>
     </div>
 
     <div ref="chartEl" class="chart"></div>
@@ -58,6 +61,11 @@
     <div class="table-meta">
       <span>共 {{ tradeResult.total }} 条</span>
       <span>第 {{ tradeResult.page }} / {{ totalPages }} 页</span>
+    </div>
+    <div class="filter-summary">
+      <strong>当前交易条件</strong>
+      <span v-if="summaryItems.length">{{ summaryItems.join(' / ') }}</span>
+      <span v-else>默认条件</span>
     </div>
 
     <div class="table-wrap">
@@ -130,12 +138,15 @@ const props = defineProps({
 
 const emit = defineEmits(['load-trades'])
 const chartEl = ref(null)
-const draftFilters = reactive({
+
+const defaultDraft = () => ({
   source: 'ALL',
   status: 'ALL',
   reason: 'ALL',
   pageSize: 10
 })
+
+const draftFilters = reactive(defaultDraft())
 let chart
 let echartsModulePromise
 
@@ -147,6 +158,23 @@ const totalPages = computed(() => {
 const reasonOptions = computed(() => props.tradeFilterOptions.reasons || [])
 const selectedReasonOption = computed(() => {
   return reasonOptions.value.includes(draftFilters.reason) ? draftFilters.reason : 'ALL'
+})
+
+const summaryItems = computed(() => {
+  const items = []
+  if (props.tradeFilters.source !== 'ALL') {
+    items.push(`来源：${adminTradeSourceLabel(props.tradeFilters.source)}`)
+  }
+  if (props.tradeFilters.status !== 'ALL') {
+    items.push(`状态：${adminTradeStatusLabel(props.tradeFilters.status)}`)
+  }
+  if (props.tradeFilters.reason !== 'ALL') {
+    items.push(`原因：${adminTradeReasonLabel(props.tradeFilters.reason)}`)
+  }
+  if (Number(props.tradeFilters.pageSize) !== 10) {
+    items.push(`每页：${props.tradeFilters.pageSize}`)
+  }
+  return items
 })
 
 watch(
@@ -216,6 +244,14 @@ function applyFilters() {
     status: draftFilters.status,
     reason: draftFilters.reason,
     pageSize: draftFilters.pageSize,
+    page: 1
+  })
+}
+
+function resetFilters() {
+  Object.assign(draftFilters, defaultDraft())
+  emit('load-trades', {
+    ...defaultDraft(),
     page: 1
   })
 }

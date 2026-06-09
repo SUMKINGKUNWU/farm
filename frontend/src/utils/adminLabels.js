@@ -1,13 +1,13 @@
 export function adminTradeSourceLabel(value) {
   if (value === 'MARKET') return '交易站'
   if (value === 'PRIVATE') return '私下交易'
-  return value
+  return value || '-'
 }
 
 export function adminTradeSideLabel(value) {
   if (value === 'BUY') return '买入'
   if (value === 'SELL') return '卖出'
-  return value
+  return value || '-'
 }
 
 export function adminTradeStatusLabel(value) {
@@ -17,7 +17,7 @@ export function adminTradeStatusLabel(value) {
   if (value === 'CANCELLED') return '已取消'
   if (value === 'EXPIRED') return '已过期'
   if (value === 'FAILED') return '失败'
-  return value
+  return value || '-'
 }
 
 export function adminTradeReasonLabel(value) {
@@ -33,8 +33,8 @@ export function adminTradeReasonLabel(value) {
 
 export function adminAuditActionLabel(value) {
   if (value === 'UPDATE_TAX_CONFIG') return '更新税率'
-  if (value === 'ISSUE_BULK_TOKEN') return '发放令牌'
-  return value
+  if (value === 'ISSUE_BULK_TOKEN') return '发放大宗令牌'
+  return value || '-'
 }
 
 export function adminAuditTargetTypeLabel(value) {

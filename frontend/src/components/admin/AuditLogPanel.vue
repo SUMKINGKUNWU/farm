@@ -32,7 +32,7 @@
       <label>
         原因建议
         <select :value="selectedReasonOption" @change="applyReasonOption($event.target.value)">
-          <option value="">不限定</option>
+          <option value="">不限</option>
           <option v-for="option in reasonOptions" :key="option" :value="option">
             {{ option }}
           </option>
@@ -44,7 +44,7 @@
           v-model.trim="draftFilters.reason"
           type="text"
           list="audit-reason-options"
-          placeholder="可手输关键词，或先选建议项"
+          placeholder="可手填关键词，或先选建议项"
         />
         <datalist id="audit-reason-options">
           <option v-for="option in reasonOptions" :key="option" :value="option" />
@@ -69,11 +69,19 @@
       <button class="button subtle" type="button" :disabled="loading" @click="applyFilters">
         应用筛选
       </button>
+      <button class="button ghost" type="button" :disabled="loading" @click="resetFilters">
+        重置日志
+      </button>
     </div>
 
     <div class="table-meta">
       <span>共 {{ auditResult.total }} 条</span>
       <span>第 {{ auditResult.page }} / {{ totalPages }} 页</span>
+    </div>
+    <div class="filter-summary">
+      <strong>当前审计条件</strong>
+      <span v-if="summaryItems.length">{{ summaryItems.join(' / ') }}</span>
+      <span v-else>默认条件</span>
     </div>
 
     <div class="table-wrap">
@@ -141,7 +149,8 @@ const props = defineProps({
 
 const emit = defineEmits(['load-audit-logs'])
 const jumpPage = ref(1)
-const draftFilters = reactive({
+
+const defaultDraft = () => ({
   action: 'ALL',
   targetType: 'ALL',
   reason: '',
@@ -149,6 +158,8 @@ const draftFilters = reactive({
   to: '',
   pageSize: 10
 })
+
+const draftFilters = reactive(defaultDraft())
 
 const totalPages = computed(() => {
   const size = Math.max(Number(props.auditResult.pageSize || props.auditFilters.pageSize || 10), 1)
@@ -161,6 +172,29 @@ const reasonOptions = computed(() => props.auditFilterOptions.reasonOptions || [
 
 const selectedReasonOption = computed(() => {
   return reasonOptions.value.includes(draftFilters.reason) ? draftFilters.reason : ''
+})
+
+const summaryItems = computed(() => {
+  const items = []
+  if (props.auditFilters.action !== 'ALL') {
+    items.push(`动作：${adminAuditActionLabel(props.auditFilters.action)}`)
+  }
+  if (props.auditFilters.targetType !== 'ALL') {
+    items.push(`目标：${adminAuditTargetTypeLabel(props.auditFilters.targetType)}`)
+  }
+  if (props.auditFilters.reason) {
+    items.push(`原因：${props.auditFilters.reason}`)
+  }
+  if (props.auditFilters.from) {
+    items.push(`开始：${props.auditFilters.from}`)
+  }
+  if (props.auditFilters.to) {
+    items.push(`结束：${props.auditFilters.to}`)
+  }
+  if (Number(props.auditFilters.pageSize) !== 10) {
+    items.push(`每页：${props.auditFilters.pageSize}`)
+  }
+  return items
 })
 
 watch(
@@ -196,6 +230,14 @@ function applyFilters() {
     from: draftFilters.from,
     to: draftFilters.to,
     pageSize: draftFilters.pageSize,
+    page: 1
+  })
+}
+
+function resetFilters() {
+  Object.assign(draftFilters, defaultDraft())
+  emit('load-audit-logs', {
+    ...defaultDraft(),
     page: 1
   })
 }
