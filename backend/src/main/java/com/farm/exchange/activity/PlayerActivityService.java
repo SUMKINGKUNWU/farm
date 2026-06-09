@@ -75,7 +75,7 @@ public class PlayerActivityService {
         queryParams.add(safePageSize);
         queryParams.add(offset);
         List<PlayerTradeRecordResponse> records = jdbcTemplate.query(
-                "select trade_source, trade_id, item_id, item_code, side, quantity, trade_amount, tax_amount, status, counterparty_user_id, counterparty_username, created_at " +
+                "select trade_source, trade_id, item_id, item_code, side, quantity, trade_amount, tax_amount, trade_reason, status, counterparty_user_id, counterparty_username, created_at " +
                         filteredSql +
                         " order by created_at desc limit ? offset ?",
                 (rs, rowNum) -> new PlayerTradeRecordResponse(
@@ -87,6 +87,7 @@ public class PlayerActivityService {
                         rs.getLong("quantity"),
                         rs.getLong("trade_amount"),
                         rs.getLong("tax_amount"),
+                        rs.getString("trade_reason"),
                         rs.getString("status"),
                         nullableUuid(rs.getString("counterparty_user_id")),
                         rs.getString("counterparty_username"),

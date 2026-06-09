@@ -68,7 +68,7 @@
         <div class="table-wrap">
           <table>
             <thead>
-              <tr><th>时间</th><th>来源</th><th>方向</th><th>商品</th><th>数量</th><th>金额</th><th>税费</th><th>对手方</th><th>状态</th></tr>
+              <tr><th>时间</th><th>来源</th><th>方向</th><th>商品</th><th>数量</th><th>金额</th><th>税费</th><th>原因</th><th>对手方</th><th>状态</th></tr>
             </thead>
             <tbody>
               <tr v-for="trade in tradeHistory.records" :key="trade.tradeId">
@@ -79,10 +79,11 @@
                 <td>{{ trade.quantity }}</td>
                 <td>{{ formatMoney(trade.tradeAmount) }}</td>
                 <td>{{ formatMoney(trade.taxAmount) }}</td>
+                <td>{{ trade.tradeReason }}</td>
                 <td>{{ trade.counterpartyUsername || '-' }}<small>{{ trade.counterpartyUserId || '-' }}</small></td>
                 <td>{{ trade.status }}</td>
               </tr>
-              <tr v-if="!tradeHistory.records.length"><td colspan="9">暂无交易记录</td></tr>
+              <tr v-if="!tradeHistory.records.length"><td colspan="10">暂无交易记录</td></tr>
             </tbody>
           </table>
         </div>

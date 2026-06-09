@@ -1113,9 +1113,11 @@ class FarmExchangeApplicationTests {
                 .andExpect(jsonPath("$.total").value(2))
                 .andExpect(jsonPath("$.records.length()").value(2))
                 .andExpect(jsonPath("$.records[0].tradeSource").value("PRIVATE"))
+                .andExpect(jsonPath("$.records[0].tradeReason").value("PRIVATE_TRADE_CANCEL"))
                 .andExpect(jsonPath("$.records[0].status").value("CANCELLED"))
                 .andExpect(jsonPath("$.records[0].counterpartyUserId").value(buyerId))
                 .andExpect(jsonPath("$.records[1].tradeSource").value("MARKET"))
+                .andExpect(jsonPath("$.records[1].tradeReason").value("MARKET_SELL"))
                 .andExpect(jsonPath("$.records[1].side").value("SELL"));
 
         mockMvc.perform(get("/api/me/trades")
@@ -1130,7 +1132,8 @@ class FarmExchangeApplicationTests {
                 .andExpect(jsonPath("$.page").value(1))
                 .andExpect(jsonPath("$.pageSize").value(1))
                 .andExpect(jsonPath("$.hasNext").value(false))
-                .andExpect(jsonPath("$.records[0].tradeSource").value("PRIVATE"));
+                .andExpect(jsonPath("$.records[0].tradeSource").value("PRIVATE"))
+                .andExpect(jsonPath("$.records[0].tradeReason").value("PRIVATE_TRADE_CANCEL"));
 
         mockMvc.perform(get("/api/me/ledger")
                         .header("Authorization", "Bearer " + sellerToken))
@@ -1329,6 +1332,13 @@ class FarmExchangeApplicationTests {
                 .andExpect(jsonPath("$.records[0].action").value("ISSUE_BULK_TOKEN"))
                 .andExpect(jsonPath("$.records[0].targetType").value("APP_USER"))
                 .andExpect(jsonPath("$.hasNext").value(true));
+
+        mockMvc.perform(get("/api/admin/audit-logs")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("from", LocalDate.now().plusDays(1).toString())
+                        .param("to", LocalDate.now().toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_OPERATION"));
 
         Integer auditCount = jdbcTemplate.queryForObject(
                 "select count(*) from admin_audit_logs where admin_user_id = ?::uuid and action in ('UPDATE_TAX_CONFIG', 'ISSUE_BULK_TOKEN')",

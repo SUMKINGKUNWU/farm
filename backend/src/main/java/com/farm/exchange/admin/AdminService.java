@@ -171,6 +171,7 @@ public class AdminService {
         String normalizedTargetType = normalizeAuditTargetType(targetType);
         OffsetDateTime fromTime = normalizeFromDate(from);
         OffsetDateTime toTime = normalizeToDate(to);
+        validateAuditDateRange(fromTime, toTime);
         int safePage = Math.max(page, 1);
         int safePageSize = Math.min(Math.max(pageSize, 1), 50);
         int offset = (safePage - 1) * safePageSize;
@@ -369,6 +370,12 @@ public class AdminService {
             return LocalDate.parse(value.trim()).plusDays(1).atStartOfDay().atOffset(ZoneOffset.ofHours(8));
         } catch (Exception error) {
             throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的结束日期");
+        }
+    }
+
+    private void validateAuditDateRange(OffsetDateTime fromTime, OffsetDateTime toTime) {
+        if (fromTime != null && toTime != null && !fromTime.isBefore(toTime)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "寮€濮嬫棩鏈熶笉鑳藉ぇ浜庣粨鏉熸棩鏈?");
         }
     }
 

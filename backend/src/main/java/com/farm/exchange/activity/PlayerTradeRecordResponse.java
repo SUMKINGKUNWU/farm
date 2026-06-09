@@ -13,12 +13,13 @@ public class PlayerTradeRecordResponse {
     private final long quantity;
     private final long tradeAmount;
     private final long taxAmount;
+    private final String tradeReason;
     private final String status;
     private final UUID counterpartyUserId;
     private final String counterpartyUsername;
     private final OffsetDateTime createdAt;
 
-    public PlayerTradeRecordResponse(String tradeSource, UUID tradeId, UUID itemId, String itemCode, String side, long quantity, long tradeAmount, long taxAmount, String status, UUID counterpartyUserId, String counterpartyUsername, OffsetDateTime createdAt) {
+    public PlayerTradeRecordResponse(String tradeSource, UUID tradeId, UUID itemId, String itemCode, String side, long quantity, long tradeAmount, long taxAmount, String tradeReason, String status, UUID counterpartyUserId, String counterpartyUsername, OffsetDateTime createdAt) {
         this.tradeSource = tradeSource;
         this.tradeId = tradeId;
         this.itemId = itemId;
@@ -27,6 +28,7 @@ public class PlayerTradeRecordResponse {
         this.quantity = quantity;
         this.tradeAmount = tradeAmount;
         this.taxAmount = taxAmount;
+        this.tradeReason = tradeReason;
         this.status = status;
         this.counterpartyUserId = counterpartyUserId;
         this.counterpartyUsername = counterpartyUsername;
@@ -63,6 +65,10 @@ public class PlayerTradeRecordResponse {
 
     public long getTaxAmount() {
         return taxAmount;
+    }
+
+    public String getTradeReason() {
+        return tradeReason;
     }
 
     public String getStatus() {
