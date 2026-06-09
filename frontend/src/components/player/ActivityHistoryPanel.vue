@@ -60,6 +60,9 @@
           <button class="button subtle" type="button" :disabled="loading" @click="applyTradeFilters">
             应用筛选
           </button>
+          <button class="button ghost" type="button" :disabled="loading" @click="resetTradeFilters">
+            重置交易
+          </button>
         </div>
 
         <div class="table-meta">
@@ -157,6 +160,9 @@
           <button class="button subtle" type="button" :disabled="loading" @click="applyLedgerFilters">
             应用筛选
           </button>
+          <button class="button ghost" type="button" :disabled="loading" @click="resetLedgerFilters">
+            重置流水
+          </button>
         </div>
 
         <div class="table-meta">
@@ -235,19 +241,22 @@ const emit = defineEmits(['refresh-activity', 'change-trade-filters', 'change-le
 const tradeJumpPage = ref(1)
 const ledgerJumpPage = ref(1)
 
-const tradeDraft = reactive({
+const defaultTradeDraft = () => ({
   source: 'ALL',
   status: 'ALL',
   reason: 'ALL',
   pageSize: 10
 })
 
-const ledgerDraft = reactive({
+const defaultLedgerDraft = () => ({
   assetType: 'ALL',
   direction: 'ALL',
   reason: 'ALL',
   pageSize: 10
 })
+
+const tradeDraft = reactive(defaultTradeDraft())
+const ledgerDraft = reactive(defaultLedgerDraft())
 
 const tradeTotalPages = computed(() => {
   const size = Math.max(Number(props.tradeHistory.pageSize || props.tradeFilters.pageSize || 10), 1)
@@ -307,12 +316,28 @@ function applyTradeFilters() {
   })
 }
 
+function resetTradeFilters() {
+  Object.assign(tradeDraft, defaultTradeDraft())
+  emit('change-trade-filters', {
+    ...defaultTradeDraft(),
+    page: 1
+  })
+}
+
 function applyLedgerFilters() {
   emit('change-ledger-filters', {
     assetType: ledgerDraft.assetType,
     direction: ledgerDraft.direction,
     reason: ledgerDraft.reason,
     pageSize: ledgerDraft.pageSize,
+    page: 1
+  })
+}
+
+function resetLedgerFilters() {
+  Object.assign(ledgerDraft, defaultLedgerDraft())
+  emit('change-ledger-filters', {
+    ...defaultLedgerDraft(),
     page: 1
   })
 }
