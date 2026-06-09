@@ -15,23 +15,25 @@
         动作
         <select v-model="draftFilters.action">
           <option value="ALL">全部</option>
-          <option value="UPDATE_TAX_CONFIG">更新税率</option>
-          <option value="ISSUE_BULK_TOKEN">发放令牌</option>
+          <option v-for="option in actionOptions" :key="option" :value="option">
+            {{ actionLabel(option) }}
+          </option>
         </select>
       </label>
       <label>
         目标
         <select v-model="draftFilters.targetType">
           <option value="ALL">全部</option>
-          <option value="TAX_CONFIG">税率配置</option>
-          <option value="APP_USER">玩家</option>
+          <option v-for="option in targetTypeOptions" :key="option" :value="option">
+            {{ targetTypeLabel(option) }}
+          </option>
         </select>
       </label>
       <label>
         原因建议
         <select :value="selectedReasonOption" @change="applyReasonOption($event.target.value)">
           <option value="">不限定</option>
-          <option v-for="option in auditReasonOptions" :key="option" :value="option">
+          <option v-for="option in reasonOptions" :key="option" :value="option">
             {{ option }}
           </option>
         </select>
@@ -45,7 +47,7 @@
           placeholder="可手输关键词，或先选建议项"
         />
         <datalist id="audit-reason-options">
-          <option v-for="option in auditReasonOptions" :key="option" :value="option" />
+          <option v-for="option in reasonOptions" :key="option" :value="option" />
         </datalist>
       </label>
       <label>
@@ -124,7 +126,14 @@ import { computed, reactive, ref, watch } from 'vue'
 const props = defineProps({
   auditResult: { type: Object, required: true },
   auditFilters: { type: Object, required: true },
-  auditReasonOptions: { type: Array, default: () => [] },
+  auditFilterOptions: {
+    type: Object,
+    default: () => ({
+      actionOptions: [],
+      targetTypeOptions: [],
+      reasonOptions: []
+    })
+  },
   loading: { type: Boolean, required: true },
   formatDate: { type: Function, required: true }
 })
@@ -145,9 +154,25 @@ const totalPages = computed(() => {
   return Math.max(1, Math.ceil(Number(props.auditResult.total || 0) / size))
 })
 
+const actionOptions = computed(() => props.auditFilterOptions.actionOptions || [])
+const targetTypeOptions = computed(() => props.auditFilterOptions.targetTypeOptions || [])
+const reasonOptions = computed(() => props.auditFilterOptions.reasonOptions || [])
+
 const selectedReasonOption = computed(() => {
-  return props.auditReasonOptions.includes(draftFilters.reason) ? draftFilters.reason : ''
+  return reasonOptions.value.includes(draftFilters.reason) ? draftFilters.reason : ''
 })
+
+function actionLabel(value) {
+  if (value === 'UPDATE_TAX_CONFIG') return '更新税率'
+  if (value === 'ISSUE_BULK_TOKEN') return '发放令牌'
+  return value
+}
+
+function targetTypeLabel(value) {
+  if (value === 'TAX_CONFIG') return '税率配置'
+  if (value === 'APP_USER') return '玩家'
+  return value
+}
 
 watch(
   () => props.auditFilters,

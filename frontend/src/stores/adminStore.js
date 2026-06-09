@@ -58,6 +58,14 @@ function defaultAuditResult() {
   }
 }
 
+function defaultAuditFilterOptions() {
+  return {
+    actionOptions: [],
+    targetTypeOptions: [],
+    reasonOptions: []
+  }
+}
+
 function defaultAssetFilters() {
   return {
     itemType: 'ALL'
@@ -76,7 +84,7 @@ export const useAdminStore = defineStore('admin', {
     assetFilters: defaultAssetFilters(),
     tradeFilters: defaultTradeFilters(),
     auditFilters: defaultAuditFilters(),
-    auditReasonOptions: [],
+    auditFilterOptions: defaultAuditFilterOptions(),
     taxConfigs: [],
     assets: null,
     tradeResult: defaultTradeResult(),
@@ -133,7 +141,7 @@ export const useAdminStore = defineStore('admin', {
       this.assetFilters = defaultAssetFilters()
       this.tradeFilters = defaultTradeFilters()
       this.auditFilters = defaultAuditFilters()
-      this.auditReasonOptions = []
+      this.auditFilterOptions = defaultAuditFilterOptions()
       this.tradeResult = defaultTradeResult()
       this.auditResult = defaultAuditResult()
       localStorage.removeItem('farm_admin_token')
@@ -211,7 +219,7 @@ export const useAdminStore = defineStore('admin', {
       this.assetFilters = defaultAssetFilters()
       this.tradeFilters = defaultTradeFilters()
       this.auditFilters = defaultAuditFilters()
-      this.auditReasonOptions = []
+      this.auditFilterOptions = defaultAuditFilterOptions()
       this.tradeResult = defaultTradeResult()
       this.auditResult = defaultAuditResult()
       this.issuedToken = null
@@ -317,8 +325,12 @@ export const useAdminStore = defineStore('admin', {
         const result = await requestJson('/api/admin/audit-logs/filter-options', {
           headers: this.authHeaders()
         })
-        this.auditReasonOptions = Array.isArray(result?.reasonOptions) ? result.reasonOptions : []
-        return this.auditReasonOptions
+        this.auditFilterOptions = {
+          actionOptions: Array.isArray(result?.actionOptions) ? result.actionOptions : [],
+          targetTypeOptions: Array.isArray(result?.targetTypeOptions) ? result.targetTypeOptions : [],
+          reasonOptions: Array.isArray(result?.reasonOptions) ? result.reasonOptions : []
+        }
+        return this.auditFilterOptions
       })
     },
     async loadPlayerConsole() {

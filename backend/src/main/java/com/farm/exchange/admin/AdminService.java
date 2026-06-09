@@ -239,7 +239,7 @@ public class AdminService {
                 (rs, rowNum) -> rs.getString("reason"),
                 AUDIT_REASON_OPTION_LIMIT
         );
-        return new AdminAuditLogFilterOptionsResponse(reasonOptions);
+        return new AdminAuditLogFilterOptionsResponse(ALLOWED_AUDIT_ACTIONS, ALLOWED_AUDIT_TARGET_TYPES, reasonOptions);
     }
 
     public List<AdminUserSearchResponse> searchUsers(UUID adminUserId, String query) {

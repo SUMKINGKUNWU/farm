@@ -1341,6 +1341,10 @@ class FarmExchangeApplicationTests {
         mockMvc.perform(get("/api/admin/audit-logs/filter-options")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.actionOptions[0]").value("UPDATE_TAX_CONFIG"))
+                .andExpect(jsonPath("$.actionOptions[1]").value("ISSUE_BULK_TOKEN"))
+                .andExpect(jsonPath("$.targetTypeOptions[0]").value("TAX_CONFIG"))
+                .andExpect(jsonPath("$.targetTypeOptions[1]").value("APP_USER"))
                 .andExpect(jsonPath("$.reasonOptions").isArray())
                 .andExpect(jsonPath("$.reasonOptions[?(@ == 'ADMIN_BULK_TOKEN_ISSUE')]").exists())
                 .andExpect(jsonPath("$.reasonOptions[?(@ == 'TEST_MARKET_TAX_UPDATE')]").exists());
