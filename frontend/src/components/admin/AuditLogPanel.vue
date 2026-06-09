@@ -28,6 +28,10 @@
         </select>
       </label>
       <label>
+        原因关键词
+        <input v-model.trim="draftFilters.reason" type="text" placeholder="例如：税率、大宗" />
+      </label>
+      <label>
         开始日期
         <input v-model="draftFilters.from" type="date" />
       </label>
@@ -104,6 +108,7 @@ const jumpPage = ref(1)
 const draftFilters = reactive({
   action: 'ALL',
   targetType: 'ALL',
+  reason: '',
   from: '',
   to: '',
   pageSize: 10
@@ -119,6 +124,7 @@ watch(
   (filters) => {
     draftFilters.action = filters.action
     draftFilters.targetType = filters.targetType
+    draftFilters.reason = filters.reason || ''
     draftFilters.from = filters.from
     draftFilters.to = filters.to
     draftFilters.pageSize = filters.pageSize
@@ -138,6 +144,7 @@ function applyFilters() {
   emit('load-audit-logs', {
     action: draftFilters.action,
     targetType: draftFilters.targetType,
+    reason: draftFilters.reason,
     from: draftFilters.from,
     to: draftFilters.to,
     pageSize: draftFilters.pageSize,

@@ -51,7 +51,7 @@ public class AdminService {
         ensureAdmin(adminUserId);
         String normalizedTradeType = tradeType.trim().toUpperCase(Locale.ROOT);
         if (!"MARKET".equals(normalizedTradeType) && !"PRIVATE".equals(normalizedTradeType) && !"BULK".equals(normalizedTradeType)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的税率类型");
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "unsupported trade type");
         }
 
         int updated = jdbcTemplate.update(
@@ -62,7 +62,7 @@ public class AdminService {
                 normalizedTradeType
         );
         if (updated != 1) {
-            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.CONFIG_MISSING, "税率配置不存在");
+            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.CONFIG_MISSING, "tax config missing");
         }
         writeAuditLog(adminUserId, "UPDATE_TAX_CONFIG", "TAX_CONFIG", null, request.getReason());
         return taxConfig(normalizedTradeType);
@@ -72,7 +72,7 @@ public class AdminService {
     public BulkTokenResponse issueBulkToken(UUID adminUserId, UUID targetUserId, AdminTokenIssueRequest request) {
         ensureAdmin(adminUserId);
         BulkTokenResponse response = bulkTokenService.issue(targetUserId, request);
-        writeAuditLog(adminUserId, "ISSUE_BULK_TOKEN", "APP_USER", targetUserId, "管理员发放大宗交易令牌");
+        writeAuditLog(adminUserId, "ISSUE_BULK_TOKEN", "APP_USER", targetUserId, "ADMIN_BULK_TOKEN_ISSUE");
         return response;
     }
 
@@ -165,10 +165,11 @@ public class AdminService {
         return new AdminTradeQueryResponse(records, totalCount, safePage, safePageSize, offset + records.size() < totalCount);
     }
 
-    public AdminAuditLogQueryResponse auditLogs(UUID adminUserId, String action, String targetType, String from, String to, int page, int pageSize) {
+    public AdminAuditLogQueryResponse auditLogs(UUID adminUserId, String action, String targetType, String reason, String from, String to, int page, int pageSize) {
         ensureAdmin(adminUserId);
         String normalizedAction = normalizeAuditAction(action);
         String normalizedTargetType = normalizeAuditTargetType(targetType);
+        String normalizedReason = normalizeAuditReason(reason);
         OffsetDateTime fromTime = normalizeFromDate(from);
         OffsetDateTime toTime = normalizeToDate(to);
         validateAuditDateRange(fromTime, toTime);
@@ -186,6 +187,10 @@ public class AdminService {
         if (!"ALL".equals(normalizedTargetType)) {
             filteredSql += " and l.target_type = ?";
             filters.add(normalizedTargetType);
+        }
+        if (!"ALL".equals(normalizedReason)) {
+            filteredSql += " and lower(coalesce(l.reason, '')) like ?";
+            filters.add("%" + normalizedReason.toLowerCase(Locale.ROOT) + "%");
         }
         if (fromTime != null) {
             filteredSql += " and l.created_at >= ?";
@@ -251,7 +256,7 @@ public class AdminService {
                 "select trade_type, rate_basis_points, updated_by, updated_reason, effective_at, updated_at from tax_config where trade_type = ?",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.CONFIG_MISSING, "税率配置不存在");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.CONFIG_MISSING, "tax config missing");
                     }
                     return new TaxConfigResponse(
                             rs.getString("trade_type"),
@@ -272,7 +277,7 @@ public class AdminService {
                         "from app_users u join wallets w on w.user_id = u.id where u.id = ?",
                 rs -> {
                     if (!rs.next()) {
-                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在");
+                        throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "user missing");
                     }
                     return new UserAssetHeader(
                             UUID.fromString(rs.getString("id")),
@@ -294,14 +299,14 @@ public class AdminService {
                 adminUserId
         );
         if (exists == null || exists == 0) {
-            throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.PERMISSION_DENIED, "需要管理员权限");
+            throw new ApiException(HttpStatus.FORBIDDEN, ErrorCode.PERMISSION_DENIED, "admin required");
         }
     }
 
     private void ensureUserExists(UUID userId) {
         Integer exists = jdbcTemplate.queryForObject("select count(*) from app_users where id = ?", Integer.class, userId);
         if (exists == null || exists == 0) {
-            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "用户不存在");
+            throw new ApiException(HttpStatus.NOT_FOUND, ErrorCode.USER_NOT_FOUND, "user missing");
         }
     }
 
@@ -310,7 +315,7 @@ public class AdminService {
         if ("ALL".equals(normalized) || "MARKET".equals(normalized) || "PRIVATE".equals(normalized)) {
             return normalized;
         }
-        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的交易来源");
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "unsupported trade source");
     }
 
     private String normalizeTradeStatus(String status) {
@@ -324,7 +329,7 @@ public class AdminService {
                 || "FAILED".equals(normalized)) {
             return normalized;
         }
-        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的交易状态");
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "unsupported trade status");
     }
 
     private String normalizeItemType(String itemType) {
@@ -332,7 +337,7 @@ public class AdminService {
         if ("ALL".equals(normalized) || ALLOWED_ITEM_TYPES.contains(normalized)) {
             return normalized;
         }
-        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的物品类型");
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "unsupported item type");
     }
 
     private String normalizeAuditAction(String action) {
@@ -340,7 +345,7 @@ public class AdminService {
         if ("ALL".equals(normalized) || ALLOWED_AUDIT_ACTIONS.contains(normalized)) {
             return normalized;
         }
-        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的审计动作");
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "unsupported audit action");
     }
 
     private String normalizeAuditTargetType(String targetType) {
@@ -348,7 +353,11 @@ public class AdminService {
         if ("ALL".equals(normalized) || ALLOWED_AUDIT_TARGET_TYPES.contains(normalized)) {
             return normalized;
         }
-        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的审计目标类型");
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "unsupported audit target");
+    }
+
+    private String normalizeAuditReason(String reason) {
+        return reason == null || reason.trim().isEmpty() ? "ALL" : reason.trim();
     }
 
     private OffsetDateTime normalizeFromDate(String value) {
@@ -358,7 +367,7 @@ public class AdminService {
         try {
             return LocalDate.parse(value.trim()).atStartOfDay().atOffset(ZoneOffset.ofHours(8));
         } catch (Exception error) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的开始日期");
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "invalid from date");
         }
     }
 
@@ -369,13 +378,13 @@ public class AdminService {
         try {
             return LocalDate.parse(value.trim()).plusDays(1).atStartOfDay().atOffset(ZoneOffset.ofHours(8));
         } catch (Exception error) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的结束日期");
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "invalid to date");
         }
     }
 
     private void validateAuditDateRange(OffsetDateTime fromTime, OffsetDateTime toTime) {
         if (fromTime != null && toTime != null && !fromTime.isBefore(toTime)) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "寮€濮嬫棩鏈熶笉鑳藉ぇ浜庣粨鏉熸棩鏈?");
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "invalid audit date range");
         }
     }
 

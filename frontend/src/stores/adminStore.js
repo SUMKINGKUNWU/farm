@@ -40,6 +40,7 @@ function defaultAuditFilters() {
   return {
     action: 'ALL',
     targetType: 'ALL',
+    reason: '',
     from: today,
     to: today,
     page: 1,
@@ -296,6 +297,7 @@ export const useAdminStore = defineStore('admin', {
         const params = new URLSearchParams({
           action: this.auditFilters.action,
           targetType: this.auditFilters.targetType,
+          reason: this.auditFilters.reason || '',
           from: this.auditFilters.from || '',
           to: this.auditFilters.to || '',
           page: String(this.auditFilters.page),

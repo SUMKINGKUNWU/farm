@@ -72,12 +72,13 @@ public class AdminController {
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestParam(value = "action", defaultValue = "ALL") String action,
             @RequestParam(value = "targetType", defaultValue = "ALL") String targetType,
+            @RequestParam(value = "reason", required = false) String reason,
             @RequestParam(value = "from", required = false) String from,
             @RequestParam(value = "to", required = false) String to,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
         AuthPrincipal admin = authTokenService.require(authorization);
-        return adminService.auditLogs(admin.getUserId(), action, targetType, from, to, page, pageSize);
+        return adminService.auditLogs(admin.getUserId(), action, targetType, reason, from, to, page, pageSize);
     }
 
     @GetMapping("/users/search")
