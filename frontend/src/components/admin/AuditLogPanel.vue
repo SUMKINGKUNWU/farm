@@ -149,13 +149,14 @@ const props = defineProps({
 
 const emit = defineEmits(['load-audit-logs'])
 const jumpPage = ref(1)
+const defaultDate = new Date().toISOString().slice(0, 10)
 
 const defaultDraft = () => ({
   action: 'ALL',
   targetType: 'ALL',
   reason: '',
-  from: '',
-  to: '',
+  from: defaultDate,
+  to: defaultDate,
   pageSize: 10
 })
 
@@ -185,10 +186,10 @@ const summaryItems = computed(() => {
   if (props.auditFilters.reason) {
     items.push(`原因：${props.auditFilters.reason}`)
   }
-  if (props.auditFilters.from) {
+  if (props.auditFilters.from && props.auditFilters.from !== defaultDate) {
     items.push(`开始：${props.auditFilters.from}`)
   }
-  if (props.auditFilters.to) {
+  if (props.auditFilters.to && props.auditFilters.to !== defaultDate) {
     items.push(`结束：${props.auditFilters.to}`)
   }
   if (Number(props.auditFilters.pageSize) !== 10) {

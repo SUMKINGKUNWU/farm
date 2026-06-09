@@ -33,21 +33,37 @@
       <button class="button subtle" type="button" :disabled="loading" @click="applyFilter">
         应用筛选
       </button>
+      <button class="button ghost" type="button" :disabled="loading" @click="resetFilter">
+        重置资产
+      </button>
+    </div>
+
+    <div class="filter-summary">
+      <strong>当前资产条件</strong>
+      <span v-if="summaryItems.length">{{ summaryItems.join(' / ') }}</span>
+      <span v-else>默认条件</span>
     </div>
 
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>商品</th><th>类型</th><th>可用</th><th>锁定</th></tr>
+          <tr>
+            <th>商品</th>
+            <th>类型</th>
+            <th>可用</th>
+            <th>锁定</th>
+          </tr>
         </thead>
         <tbody>
           <tr v-for="item in assets?.inventory || []" :key="item.itemId">
             <td>{{ item.itemName }} <small>{{ item.itemCode }}</small></td>
-            <td>{{ item.itemType }}</td>
+            <td>{{ adminAssetTypeLabel(item.itemType) }}</td>
             <td>{{ item.availableQuantity }}</td>
             <td>{{ item.lockedQuantity }}</td>
           </tr>
-          <tr v-if="!assets?.inventory?.length"><td colspan="4">暂无库存数据</td></tr>
+          <tr v-if="!assets?.inventory?.length">
+            <td colspan="4">暂无库存数据</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -55,8 +71,9 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import StatCard from '../common/StatCard.vue'
+import { adminAssetTypeLabel } from '../../utils/adminLabels'
 
 const props = defineProps({
   assets: { type: Object, default: null },
@@ -68,6 +85,14 @@ const props = defineProps({
 const emit = defineEmits(['load-assets'])
 const draftItemType = ref('ALL')
 
+const summaryItems = computed(() => {
+  const items = []
+  if (props.assetFilters.itemType !== 'ALL') {
+    items.push(`物品类型：${adminAssetTypeLabel(props.assetFilters.itemType)}`)
+  }
+  return items
+})
+
 watch(
   () => props.assetFilters.itemType,
   (value) => {
@@ -78,6 +103,11 @@ watch(
 
 function applyFilter() {
   emit('load-assets', { itemType: draftItemType.value })
+}
+
+function resetFilter() {
+  draftItemType.value = 'ALL'
+  emit('load-assets', { itemType: 'ALL' })
 }
 
 function refreshAssets() {

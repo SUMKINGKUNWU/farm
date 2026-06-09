@@ -42,3 +42,13 @@ export function adminAuditTargetTypeLabel(value) {
   if (value === 'APP_USER') return '玩家'
   return value || '-'
 }
+
+export function adminAssetTypeLabel(value) {
+  if (value === 'SEED') return '种子'
+  if (value === 'ANIMAL') return '动物'
+  if (value === 'FEED') return '饲料'
+  if (value === 'HARVEST') return '产出物'
+  if (value === 'TOKEN') return '令牌'
+  if (value === 'CONSUMABLE') return '消耗品'
+  return value || '-'
+}
