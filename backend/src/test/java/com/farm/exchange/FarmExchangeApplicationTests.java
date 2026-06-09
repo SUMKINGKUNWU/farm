@@ -1291,12 +1291,14 @@ class FarmExchangeApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(2))
                 .andExpect(jsonPath("$.records[0].tradeSource").value("MARKET"))
+                .andExpect(jsonPath("$.records[0].tradeReason").value("MARKET_BUY"))
                 .andExpect(jsonPath("$.records[0].itemCode").value("CORN"));
 
         mockMvc.perform(get("/api/admin/users/" + playerId + "/trades")
                         .header("Authorization", "Bearer " + adminToken)
                         .param("source", "MARKET")
                         .param("status", "COMPLETED")
+                        .param("reason", "MARKET_BUY")
                         .param("page", "1")
                         .param("pageSize", "1"))
                 .andExpect(status().isOk())
@@ -1305,7 +1307,16 @@ class FarmExchangeApplicationTests {
                 .andExpect(jsonPath("$.pageSize").value(1))
                 .andExpect(jsonPath("$.hasNext").value(true))
                 .andExpect(jsonPath("$.records.length()").value(1))
+                .andExpect(jsonPath("$.records[0].tradeReason").value("MARKET_BUY"))
                 .andExpect(jsonPath("$.records[0].itemCode").value("CORN"));
+
+        mockMvc.perform(get("/api/admin/users/" + playerId + "/trades/filter-options")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reasons").isArray())
+                .andExpect(jsonPath("$.reasons[?(@ == 'MARKET_BUY')]").exists())
+                .andExpect(jsonPath("$.reasons[?(@ == 'PRIVATE_TRADE_CANCEL')]").exists());
+
 
         mockMvc.perform(get("/api/admin/audit-logs")
                         .header("Authorization", "Bearer " + adminToken))

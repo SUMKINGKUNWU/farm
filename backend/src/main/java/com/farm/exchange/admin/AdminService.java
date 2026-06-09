@@ -21,6 +21,15 @@ public class AdminService {
 
     private static final int AUDIT_REASON_OPTION_LIMIT = 12;
     private static final List<String> ALLOWED_ITEM_TYPES = List.of("SEED", "ANIMAL", "FEED", "HARVEST", "TOKEN", "CONSUMABLE");
+    private static final List<String> ALLOWED_TRADE_REASONS = List.of(
+            "MARKET_BUY",
+            "MARKET_SELL",
+            "PRIVATE_TRADE_CREATE",
+            "PRIVATE_TRADE_ACCEPT",
+            "PRIVATE_TRADE_CANCEL",
+            "PRIVATE_TRADE_EXPIRE",
+            "PRIVATE_TRADE_UPDATE"
+    );
     private static final List<String> ALLOWED_AUDIT_ACTIONS = List.of("UPDATE_TAX_CONFIG", "ISSUE_BULK_TOKEN");
     private static final List<String> ALLOWED_AUDIT_TARGET_TYPES = List.of("TAX_CONFIG", "APP_USER");
 
@@ -108,22 +117,31 @@ public class AdminService {
         return new AdminUserAssetResponse(header.userId, header.username, header.nickname, header.status, header.balance, header.lockedBalance, inventory);
     }
 
-    public AdminTradeQueryResponse userTrades(UUID adminUserId, UUID targetUserId, String source, String status, int page, int pageSize) {
+    public AdminTradeQueryResponse userTrades(UUID adminUserId, UUID targetUserId, String source, String status, String reason, int page, int pageSize) {
         ensureAdmin(adminUserId);
         ensureUserExists(targetUserId);
         String tradeSource = normalizeTradeSource(source);
         String tradeStatus = normalizeTradeStatus(status);
+        String tradeReason = normalizeTradeReason(reason);
         int safePage = Math.max(page, 1);
         int safePageSize = Math.min(Math.max(pageSize, 1), 50);
         int offset = (safePage - 1) * safePageSize;
 
         String filteredSql =
                 "from (" +
-                        "select 'MARKET' as trade_source, mt.id as trade_id, mt.item_id, i.code as item_code, mt.side, mt.quantity, mt.gross_amount as trade_amount, mt.tax_amount, mt.status, mt.created_at " +
+                        "select 'MARKET' as trade_source, mt.id as trade_id, mt.item_id, i.code as item_code, mt.side, mt.quantity, mt.gross_amount as trade_amount, mt.tax_amount, " +
+                        "case when mt.side = 'BUY' then 'MARKET_BUY' else 'MARKET_SELL' end as trade_reason, mt.status, mt.created_at " +
                         "from market_trades mt join items i on i.id = mt.item_id where mt.user_id = ? " +
                         "union all " +
                         "select 'PRIVATE' as trade_source, p.id as trade_id, p.item_id, i.code as item_code, " +
-                        "case when p.seller_user_id = ? then 'SELL' else 'BUY' end as side, p.quantity, p.price_amount as trade_amount, p.tax_amount, p.status, p.created_at " +
+                        "case when p.seller_user_id = ? then 'SELL' else 'BUY' end as side, p.quantity, p.price_amount as trade_amount, p.tax_amount, " +
+                        "case " +
+                        "when p.status = 'WAIT_ACCEPT' then 'PRIVATE_TRADE_CREATE' " +
+                        "when p.status = 'COMPLETED' then 'PRIVATE_TRADE_ACCEPT' " +
+                        "when p.status = 'CANCELLED' then 'PRIVATE_TRADE_CANCEL' " +
+                        "when p.status = 'EXPIRED' then 'PRIVATE_TRADE_EXPIRE' " +
+                        "else 'PRIVATE_TRADE_UPDATE' end as trade_reason, " +
+                        "p.status, p.created_at " +
                         "from private_trade_offers p join items i on i.id = p.item_id where p.seller_user_id = ? or p.buyer_user_id = ? " +
                         ") trade_records where 1 = 1";
         List<Object> filters = new ArrayList<>();
@@ -135,6 +153,10 @@ public class AdminService {
             filteredSql += " and status = ?";
             filters.add(tradeStatus);
         }
+        if (!"ALL".equals(tradeReason)) {
+            filteredSql += " and trade_reason = ?";
+            filters.add(tradeReason);
+        }
 
         List<Object> baseParams = List.of(targetUserId, targetUserId, targetUserId, targetUserId);
         List<Object> countParams = new ArrayList<>(baseParams);
@@ -145,7 +167,7 @@ public class AdminService {
         queryParams.add(safePageSize);
         queryParams.add(offset);
         List<AdminTradeRecordResponse> records = jdbcTemplate.query(
-                "select trade_source, trade_id, item_id, item_code, side, quantity, trade_amount, tax_amount, status, created_at " +
+                "select trade_source, trade_id, item_id, item_code, side, quantity, trade_amount, tax_amount, trade_reason, status, created_at " +
                         filteredSql +
                         " order by created_at desc limit ? offset ?",
                 (rs, rowNum) -> new AdminTradeRecordResponse(
@@ -157,6 +179,7 @@ public class AdminService {
                         rs.getLong("quantity"),
                         rs.getLong("trade_amount"),
                         rs.getLong("tax_amount"),
+                        rs.getString("trade_reason"),
                         rs.getString("status"),
                         rs.getObject("created_at", OffsetDateTime.class)
                 ),
@@ -164,6 +187,12 @@ public class AdminService {
         );
         long totalCount = total == null ? 0L : total;
         return new AdminTradeQueryResponse(records, totalCount, safePage, safePageSize, offset + records.size() < totalCount);
+    }
+
+    public AdminTradeFilterOptionsResponse userTradeFilterOptions(UUID adminUserId, UUID targetUserId) {
+        ensureAdmin(adminUserId);
+        ensureUserExists(targetUserId);
+        return new AdminTradeFilterOptionsResponse(ALLOWED_TRADE_REASONS);
     }
 
     public AdminAuditLogQueryResponse auditLogs(UUID adminUserId, String action, String targetType, String reason, String from, String to, int page, int pageSize) {
@@ -346,6 +375,14 @@ public class AdminService {
             return normalized;
         }
         throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "unsupported trade status");
+    }
+
+    private String normalizeTradeReason(String reason) {
+        String normalized = reason == null || reason.trim().isEmpty() ? "ALL" : reason.trim().toUpperCase(Locale.ROOT);
+        if ("ALL".equals(normalized) || ALLOWED_TRADE_REASONS.contains(normalized)) {
+            return normalized;
+        }
+        throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "unsupported trade reason");
     }
 
     private String normalizeItemType(String itemType) {

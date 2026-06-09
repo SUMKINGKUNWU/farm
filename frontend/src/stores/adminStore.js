@@ -20,6 +20,7 @@ function defaultTradeFilters() {
   return {
     source: 'ALL',
     status: 'ALL',
+    reason: 'ALL',
     page: 1,
     pageSize: 10
   }
@@ -32,6 +33,12 @@ function defaultTradeResult() {
     page: 1,
     pageSize: 10,
     hasNext: false
+  }
+}
+
+function defaultTradeFilterOptions() {
+  return {
+    reasons: []
   }
 }
 
@@ -83,6 +90,7 @@ export const useAdminStore = defineStore('admin', {
     userSearchResults: [],
     assetFilters: defaultAssetFilters(),
     tradeFilters: defaultTradeFilters(),
+    tradeFilterOptions: defaultTradeFilterOptions(),
     auditFilters: defaultAuditFilters(),
     auditFilterOptions: defaultAuditFilterOptions(),
     taxConfigs: [],
@@ -140,6 +148,7 @@ export const useAdminStore = defineStore('admin', {
       this.userSearchResults = []
       this.assetFilters = defaultAssetFilters()
       this.tradeFilters = defaultTradeFilters()
+      this.tradeFilterOptions = defaultTradeFilterOptions()
       this.auditFilters = defaultAuditFilters()
       this.auditFilterOptions = defaultAuditFilterOptions()
       this.tradeResult = defaultTradeResult()
@@ -218,6 +227,7 @@ export const useAdminStore = defineStore('admin', {
       this.assets = null
       this.assetFilters = defaultAssetFilters()
       this.tradeFilters = defaultTradeFilters()
+      this.tradeFilterOptions = defaultTradeFilterOptions()
       this.auditFilters = defaultAuditFilters()
       this.auditFilterOptions = defaultAuditFilterOptions()
       this.tradeResult = defaultTradeResult()
@@ -290,6 +300,7 @@ export const useAdminStore = defineStore('admin', {
         const params = new URLSearchParams({
           source: this.tradeFilters.source,
           status: this.tradeFilters.status,
+          reason: this.tradeFilters.reason,
           page: String(this.tradeFilters.page),
           pageSize: String(this.tradeFilters.pageSize)
         })
@@ -298,6 +309,17 @@ export const useAdminStore = defineStore('admin', {
         })
         return this.tradeResult
       }, '交易记录已刷新')
+    },
+    async loadTradeFilterOptions() {
+      return this.run(async () => {
+        const result = await requestJson(`/api/admin/users/${this.targetId()}/trades/filter-options`, {
+          headers: this.authHeaders()
+        })
+        this.tradeFilterOptions = {
+          reasons: Array.isArray(result?.reasons) ? result.reasons : []
+        }
+        return this.tradeFilterOptions
+      })
     },
     async loadAuditLogs(overrides = {}) {
       return this.run(async () => {
@@ -335,6 +357,7 @@ export const useAdminStore = defineStore('admin', {
     },
     async loadPlayerConsole() {
       await this.loadAssets()
+      await this.loadTradeFilterOptions()
       await this.loadTrades({ page: 1 })
       await this.loadAuditLogs({ page: 1 })
     }

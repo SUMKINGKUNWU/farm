@@ -32,6 +32,15 @@
         </select>
       </label>
       <label>
+        原因建议
+        <select :value="selectedReasonOption" @change="applyReasonOption($event.target.value)">
+          <option value="ALL">全部</option>
+          <option v-for="option in reasonOptions" :key="option" :value="option">
+            {{ reasonLabel(option) }}
+          </option>
+        </select>
+      </label>
+      <label>
         每页
         <select v-model.number="draftFilters.pageSize">
           <option :value="10">10</option>
@@ -62,22 +71,24 @@
             <th>数量</th>
             <th>金额</th>
             <th>税费</th>
+            <th>原因</th>
             <th>状态</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="trade in tradeResult.records" :key="trade.tradeId">
             <td>{{ formatDate(trade.createdAt) }}</td>
-            <td>{{ trade.tradeSource }}</td>
-            <td>{{ trade.side }}</td>
+            <td>{{ tradeSourceLabel(trade.tradeSource) }}</td>
+            <td>{{ sideLabel(trade.side) }}</td>
             <td>{{ trade.itemCode }}</td>
             <td>{{ trade.quantity }}</td>
             <td>{{ formatMoney(trade.tradeAmount) }}</td>
             <td>{{ formatMoney(trade.taxAmount) }}</td>
-            <td>{{ trade.status }}</td>
+            <td>{{ reasonLabel(trade.tradeReason) }}</td>
+            <td>{{ statusLabel(trade.status) }}</td>
           </tr>
           <tr v-if="!tradeResult.records.length">
-            <td colspan="8">暂无交易记录</td>
+            <td colspan="9">暂无交易记录</td>
           </tr>
         </tbody>
       </table>
@@ -100,6 +111,12 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 const props = defineProps({
   tradeResult: { type: Object, required: true },
   tradeFilters: { type: Object, required: true },
+  tradeFilterOptions: {
+    type: Object,
+    default: () => ({
+      reasons: []
+    })
+  },
   loading: { type: Boolean, required: true },
   formatMoney: { type: Function, required: true },
   formatDate: { type: Function, required: true }
@@ -110,6 +127,7 @@ const chartEl = ref(null)
 const draftFilters = reactive({
   source: 'ALL',
   status: 'ALL',
+  reason: 'ALL',
   pageSize: 10
 })
 let chart
@@ -120,11 +138,17 @@ const totalPages = computed(() => {
   return Math.max(1, Math.ceil(Number(props.tradeResult.total || 0) / size))
 })
 
+const reasonOptions = computed(() => props.tradeFilterOptions.reasons || [])
+const selectedReasonOption = computed(() => {
+  return reasonOptions.value.includes(draftFilters.reason) ? draftFilters.reason : 'ALL'
+})
+
 watch(
   () => props.tradeFilters,
   (filters) => {
     draftFilters.source = filters.source
     draftFilters.status = filters.status
+    draftFilters.reason = filters.reason
     draftFilters.pageSize = filters.pageSize
   },
   { deep: true, immediate: true }
@@ -176,10 +200,48 @@ async function renderChart() {
   })
 }
 
+function tradeSourceLabel(value) {
+  if (value === 'MARKET') return '交易站'
+  if (value === 'PRIVATE') return '私下交易'
+  return value
+}
+
+function sideLabel(value) {
+  if (value === 'BUY') return '买入'
+  if (value === 'SELL') return '卖出'
+  return value
+}
+
+function statusLabel(value) {
+  if (value === 'COMPLETED') return '已完成'
+  if (value === 'WAIT_ACCEPT') return '待接受'
+  if (value === 'SETTLING') return '结算中'
+  if (value === 'CANCELLED') return '已取消'
+  if (value === 'EXPIRED') return '已过期'
+  if (value === 'FAILED') return '失败'
+  return value
+}
+
+function reasonLabel(value) {
+  if (value === 'MARKET_BUY') return '交易站买入'
+  if (value === 'MARKET_SELL') return '交易站卖出'
+  if (value === 'PRIVATE_TRADE_CREATE') return '私下交易创建'
+  if (value === 'PRIVATE_TRADE_ACCEPT') return '私下交易成交'
+  if (value === 'PRIVATE_TRADE_CANCEL') return '私下交易取消'
+  if (value === 'PRIVATE_TRADE_EXPIRE') return '私下交易过期'
+  if (value === 'PRIVATE_TRADE_UPDATE') return '私下交易更新'
+  return value || '-'
+}
+
+function applyReasonOption(value) {
+  draftFilters.reason = value || 'ALL'
+}
+
 function applyFilters() {
   emit('load-trades', {
     source: draftFilters.source,
     status: draftFilters.status,
+    reason: draftFilters.reason,
     pageSize: draftFilters.pageSize,
     page: 1
   })

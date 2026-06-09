@@ -40,6 +40,7 @@
     <TradeRecordsPanel
       :trade-result="admin.tradeResult"
       :trade-filters="admin.tradeFilters"
+      :trade-filter-options="admin.tradeFilterOptions"
       :loading="admin.loading"
       :format-money="formatMoney"
       :format-date="formatDate"

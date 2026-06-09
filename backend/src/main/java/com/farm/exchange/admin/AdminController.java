@@ -61,10 +61,19 @@ public class AdminController {
             @PathVariable UUID targetUserId,
             @RequestParam(value = "source", defaultValue = "ALL") String source,
             @RequestParam(value = "status", defaultValue = "ALL") String status,
+            @RequestParam(value = "reason", defaultValue = "ALL") String reason,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
         AuthPrincipal admin = authTokenService.require(authorization);
-        return adminService.userTrades(admin.getUserId(), targetUserId, source, status, page, pageSize);
+        return adminService.userTrades(admin.getUserId(), targetUserId, source, status, reason, page, pageSize);
+    }
+
+    @GetMapping("/users/{targetUserId}/trades/filter-options")
+    public AdminTradeFilterOptionsResponse userTradeFilterOptions(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable UUID targetUserId) {
+        AuthPrincipal admin = authTokenService.require(authorization);
+        return adminService.userTradeFilterOptions(admin.getUserId(), targetUserId);
     }
 
     @GetMapping("/audit-logs")
