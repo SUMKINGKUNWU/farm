@@ -69,6 +69,11 @@
           <span>共 {{ tradeHistory.total }} 条</span>
           <span>第 {{ tradeHistory.page }} / {{ tradeTotalPages }} 页</span>
         </div>
+        <div class="filter-summary">
+          <strong>当前交易条件</strong>
+          <span v-if="tradeSummaryItems.length">{{ tradeSummaryItems.join(' / ') }}</span>
+          <span v-else>默认条件</span>
+        </div>
 
         <div class="table-wrap">
           <table>
@@ -169,6 +174,11 @@
           <span>共 {{ ledgerEntries.total }} 条</span>
           <span>第 {{ ledgerEntries.page }} / {{ ledgerTotalPages }} 页</span>
         </div>
+        <div class="filter-summary">
+          <strong>当前流水条件</strong>
+          <span v-if="ledgerSummaryItems.length">{{ ledgerSummaryItems.join(' / ') }}</span>
+          <span v-else>默认条件</span>
+        </div>
 
         <div class="table-wrap slim-table">
           <table>
@@ -216,6 +226,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import StatCard from '../common/StatCard.vue'
 import {
   playerAssetTypeLabel,
+  playerLedgerDirectionLabel,
   playerLedgerReasonLabel,
   playerTradeReasonLabel,
   playerTradeSideLabel,
@@ -266,6 +277,40 @@ const tradeTotalPages = computed(() => {
 const ledgerTotalPages = computed(() => {
   const size = Math.max(Number(props.ledgerEntries.pageSize || props.ledgerFilters.pageSize || 10), 1)
   return Math.max(1, Math.ceil(Number(props.ledgerEntries.total || 0) / size))
+})
+
+const tradeSummaryItems = computed(() => {
+  const items = []
+  if (props.tradeFilters.source !== 'ALL') {
+    items.push(`来源：${playerTradeSourceLabel(props.tradeFilters.source)}`)
+  }
+  if (props.tradeFilters.status !== 'ALL') {
+    items.push(`状态：${playerTradeStatusLabel(props.tradeFilters.status)}`)
+  }
+  if (props.tradeFilters.reason !== 'ALL') {
+    items.push(`原因：${playerTradeReasonLabel(props.tradeFilters.reason)}`)
+  }
+  if (Number(props.tradeFilters.pageSize) !== 10) {
+    items.push(`每页：${props.tradeFilters.pageSize}`)
+  }
+  return items
+})
+
+const ledgerSummaryItems = computed(() => {
+  const items = []
+  if (props.ledgerFilters.assetType !== 'ALL') {
+    items.push(`资产：${playerAssetTypeLabel(props.ledgerFilters.assetType)}`)
+  }
+  if (props.ledgerFilters.direction !== 'ALL') {
+    items.push(`方向：${playerLedgerDirectionLabel(props.ledgerFilters.direction)}`)
+  }
+  if (props.ledgerFilters.reason !== 'ALL') {
+    items.push(`原因：${playerLedgerReasonLabel(props.ledgerFilters.reason)}`)
+  }
+  if (Number(props.ledgerFilters.pageSize) !== 10) {
+    items.push(`每页：${props.ledgerFilters.pageSize}`)
+  }
+  return items
 })
 
 watch(

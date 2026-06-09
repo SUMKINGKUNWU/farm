@@ -38,6 +38,12 @@ export function playerAssetTypeLabel(value) {
   return value || '-'
 }
 
+export function playerLedgerDirectionLabel(value) {
+  if (value === 'IN') return '收入'
+  if (value === 'OUT') return '支出'
+  return value || '-'
+}
+
 export function playerLedgerReasonLabel(value) {
   if (value === 'INITIAL_GRANT') return '初始发放'
   if (value === 'EXPAND_FARM') return '扩建农田'
