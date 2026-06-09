@@ -753,6 +753,26 @@ h3 {
   font-weight: 800;
 }
 
+.filter-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 248, 232, 0.72);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.filter-summary strong {
+  color: var(--ink);
+  font-size: 12px;
+}
+
 .pager-row {
   justify-content: flex-end;
 }
