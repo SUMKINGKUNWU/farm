@@ -76,6 +76,7 @@ export const useAdminStore = defineStore('admin', {
     assetFilters: defaultAssetFilters(),
     tradeFilters: defaultTradeFilters(),
     auditFilters: defaultAuditFilters(),
+    auditReasonOptions: [],
     taxConfigs: [],
     assets: null,
     tradeResult: defaultTradeResult(),
@@ -132,6 +133,7 @@ export const useAdminStore = defineStore('admin', {
       this.assetFilters = defaultAssetFilters()
       this.tradeFilters = defaultTradeFilters()
       this.auditFilters = defaultAuditFilters()
+      this.auditReasonOptions = []
       this.tradeResult = defaultTradeResult()
       this.auditResult = defaultAuditResult()
       localStorage.removeItem('farm_admin_token')
@@ -209,6 +211,7 @@ export const useAdminStore = defineStore('admin', {
       this.assetFilters = defaultAssetFilters()
       this.tradeFilters = defaultTradeFilters()
       this.auditFilters = defaultAuditFilters()
+      this.auditReasonOptions = []
       this.tradeResult = defaultTradeResult()
       this.auditResult = defaultAuditResult()
       this.issuedToken = null
@@ -308,6 +311,15 @@ export const useAdminStore = defineStore('admin', {
         })
         return this.auditResult
       }, '审计日志已刷新')
+    },
+    async loadAuditFilterOptions() {
+      return this.run(async () => {
+        const result = await requestJson('/api/admin/audit-logs/filter-options', {
+          headers: this.authHeaders()
+        })
+        this.auditReasonOptions = Array.isArray(result?.reasonOptions) ? result.reasonOptions : []
+        return this.auditReasonOptions
+      })
     },
     async loadPlayerConsole() {
       await this.loadAssets()

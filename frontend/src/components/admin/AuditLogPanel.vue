@@ -28,8 +28,25 @@
         </select>
       </label>
       <label>
+        原因建议
+        <select :value="selectedReasonOption" @change="applyReasonOption($event.target.value)">
+          <option value="">不限定</option>
+          <option v-for="option in auditReasonOptions" :key="option" :value="option">
+            {{ option }}
+          </option>
+        </select>
+      </label>
+      <label>
         原因关键词
-        <input v-model.trim="draftFilters.reason" type="text" placeholder="例如：税率、大宗" />
+        <input
+          v-model.trim="draftFilters.reason"
+          type="text"
+          list="audit-reason-options"
+          placeholder="可手输关键词，或先选建议项"
+        />
+        <datalist id="audit-reason-options">
+          <option v-for="option in auditReasonOptions" :key="option" :value="option" />
+        </datalist>
       </label>
       <label>
         开始日期
@@ -60,7 +77,13 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>时间</th><th>管理员</th><th>动作</th><th>目标</th><th>原因</th></tr>
+          <tr>
+            <th>时间</th>
+            <th>管理员</th>
+            <th>动作</th>
+            <th>目标</th>
+            <th>原因</th>
+          </tr>
         </thead>
         <tbody>
           <tr v-for="entry in auditResult.records" :key="entry.auditId">
@@ -70,7 +93,9 @@
             <td>{{ entry.targetType || '-' }}<small>{{ entry.targetId || '-' }}</small></td>
             <td>{{ entry.reason || '-' }}</td>
           </tr>
-          <tr v-if="!auditResult.records.length"><td colspan="5">暂无审计日志</td></tr>
+          <tr v-if="!auditResult.records.length">
+            <td colspan="5">暂无审计日志</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -99,6 +124,7 @@ import { computed, reactive, ref, watch } from 'vue'
 const props = defineProps({
   auditResult: { type: Object, required: true },
   auditFilters: { type: Object, required: true },
+  auditReasonOptions: { type: Array, default: () => [] },
   loading: { type: Boolean, required: true },
   formatDate: { type: Function, required: true }
 })
@@ -117,6 +143,10 @@ const draftFilters = reactive({
 const totalPages = computed(() => {
   const size = Math.max(Number(props.auditResult.pageSize || props.auditFilters.pageSize || 10), 1)
   return Math.max(1, Math.ceil(Number(props.auditResult.total || 0) / size))
+})
+
+const selectedReasonOption = computed(() => {
+  return props.auditReasonOptions.includes(draftFilters.reason) ? draftFilters.reason : ''
 })
 
 watch(
@@ -139,6 +169,10 @@ watch(
   },
   { immediate: true }
 )
+
+function applyReasonOption(value) {
+  draftFilters.reason = value || ''
+}
 
 function applyFilters() {
   emit('load-audit-logs', {

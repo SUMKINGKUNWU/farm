@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminService {
 
+    private static final int AUDIT_REASON_OPTION_LIMIT = 12;
     private static final List<String> ALLOWED_ITEM_TYPES = List.of("SEED", "ANIMAL", "FEED", "HARVEST", "TOKEN", "CONSUMABLE");
     private static final List<String> ALLOWED_AUDIT_ACTIONS = List.of("UPDATE_TAX_CONFIG", "ISSUE_BULK_TOKEN");
     private static final List<String> ALLOWED_AUDIT_TARGET_TYPES = List.of("TAX_CONFIG", "APP_USER");
@@ -224,6 +225,21 @@ public class AdminService {
         );
         long totalCount = total == null ? 0L : total;
         return new AdminAuditLogQueryResponse(records, totalCount, safePage, safePageSize, offset + records.size() < totalCount);
+    }
+
+    public AdminAuditLogFilterOptionsResponse auditLogFilterOptions(UUID adminUserId) {
+        ensureAdmin(adminUserId);
+        List<String> reasonOptions = jdbcTemplate.query(
+                "select reason " +
+                        "from admin_audit_logs " +
+                        "where reason is not null and trim(reason) <> '' " +
+                        "group by reason " +
+                        "order by max(created_at) desc " +
+                        "limit ?",
+                (rs, rowNum) -> rs.getString("reason"),
+                AUDIT_REASON_OPTION_LIMIT
+        );
+        return new AdminAuditLogFilterOptionsResponse(reasonOptions);
     }
 
     public List<AdminUserSearchResponse> searchUsers(UUID adminUserId, String query) {

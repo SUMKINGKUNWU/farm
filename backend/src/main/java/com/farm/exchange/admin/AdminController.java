@@ -81,6 +81,12 @@ public class AdminController {
         return adminService.auditLogs(admin.getUserId(), action, targetType, reason, from, to, page, pageSize);
     }
 
+    @GetMapping("/audit-logs/filter-options")
+    public AdminAuditLogFilterOptionsResponse auditLogFilterOptions(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        AuthPrincipal admin = authTokenService.require(authorization);
+        return adminService.auditLogFilterOptions(admin.getUserId());
+    }
+
     @GetMapping("/users/search")
     public List<AdminUserSearchResponse> searchUsers(@RequestHeader(value = "Authorization", required = false) String authorization, @RequestParam("q") String query) {
         AuthPrincipal admin = authTokenService.require(authorization);

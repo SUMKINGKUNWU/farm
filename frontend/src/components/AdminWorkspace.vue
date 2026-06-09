@@ -48,6 +48,7 @@
     <AuditLogPanel
       :audit-result="admin.auditResult"
       :audit-filters="admin.auditFilters"
+      :audit-reason-options="admin.auditReasonOptions"
       :loading="admin.loading"
       :format-date="formatDate"
       @load-audit-logs="admin.loadAuditLogs"

@@ -139,6 +139,7 @@ async function selectAdminUser(user) {
 
 async function loadAdminEverything() {
   await admin.loadTaxConfigs()
+  await admin.loadAuditFilterOptions()
   await admin.loadAuditLogs()
   if (admin.targetUserId) {
     await admin.loadPlayerConsole()
