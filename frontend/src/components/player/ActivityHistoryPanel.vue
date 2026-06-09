@@ -41,6 +41,13 @@
             </select>
           </label>
           <label>
+            交易原因
+            <select v-model="tradeDraft.reason">
+              <option value="ALL">全部</option>
+              <option v-for="reason in tradeReasonOptions" :key="reason" :value="reason">{{ reason }}</option>
+            </select>
+          </label>
+          <label>
             每页
             <select v-model.number="tradeDraft.pageSize">
               <option :value="10">10</option>
@@ -84,6 +91,13 @@
           <button class="button ghost" type="button" :disabled="loading || tradeHistory.page <= 1" @click="changeTradePage(tradeHistory.page - 1)">
             上一页
           </button>
+          <label class="page-jump">
+            页码
+            <input v-model.number="tradeJumpPage" type="number" min="1" :max="tradeTotalPages" />
+          </label>
+          <button class="button subtle" type="button" :disabled="loading" @click="goTradePage">
+            跳转
+          </button>
           <button class="button ghost" type="button" :disabled="loading || !tradeHistory.hasNext" @click="changeTradePage(tradeHistory.page + 1)">
             下一页
           </button>
@@ -107,6 +121,13 @@
               <option value="ALL">全部</option>
               <option value="IN">收入</option>
               <option value="OUT">支出</option>
+            </select>
+          </label>
+          <label>
+            流水原因
+            <select v-model="ledgerDraft.reason">
+              <option value="ALL">全部</option>
+              <option v-for="reason in ledgerReasonOptions" :key="reason" :value="reason">{{ reason }}</option>
             </select>
           </label>
           <label>
@@ -152,6 +173,13 @@
           <button class="button ghost" type="button" :disabled="loading || ledgerEntries.page <= 1" @click="changeLedgerPage(ledgerEntries.page - 1)">
             上一页
           </button>
+          <label class="page-jump">
+            页码
+            <input v-model.number="ledgerJumpPage" type="number" min="1" :max="ledgerTotalPages" />
+          </label>
+          <button class="button subtle" type="button" :disabled="loading" @click="goLedgerPage">
+            跳转
+          </button>
           <button class="button ghost" type="button" :disabled="loading || !ledgerEntries.hasNext" @click="changeLedgerPage(ledgerEntries.page + 1)">
             下一页
           </button>
@@ -162,7 +190,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import StatCard from '../common/StatCard.vue'
 
 const props = defineProps({
@@ -171,6 +199,8 @@ const props = defineProps({
   ledgerEntries: { type: Object, required: true },
   tradeFilters: { type: Object, required: true },
   ledgerFilters: { type: Object, required: true },
+  tradeReasonOptions: { type: Array, required: true },
+  ledgerReasonOptions: { type: Array, required: true },
   loading: { type: Boolean, required: true },
   formatMoney: { type: Function, required: true },
   formatDate: { type: Function, required: true }
@@ -178,15 +208,20 @@ const props = defineProps({
 
 const emit = defineEmits(['refresh-activity', 'change-trade-filters', 'change-ledger-filters'])
 
+const tradeJumpPage = ref(1)
+const ledgerJumpPage = ref(1)
+
 const tradeDraft = reactive({
   source: 'ALL',
   status: 'ALL',
+  reason: 'ALL',
   pageSize: 10
 })
 
 const ledgerDraft = reactive({
   assetType: 'ALL',
   direction: 'ALL',
+  reason: 'ALL',
   pageSize: 10
 })
 
@@ -205,6 +240,7 @@ watch(
   (filters) => {
     tradeDraft.source = filters.source
     tradeDraft.status = filters.status
+    tradeDraft.reason = filters.reason
     tradeDraft.pageSize = filters.pageSize
   },
   { deep: true, immediate: true }
@@ -215,15 +251,33 @@ watch(
   (filters) => {
     ledgerDraft.assetType = filters.assetType
     ledgerDraft.direction = filters.direction
+    ledgerDraft.reason = filters.reason
     ledgerDraft.pageSize = filters.pageSize
   },
   { deep: true, immediate: true }
+)
+
+watch(
+  () => props.tradeHistory.page,
+  (page) => {
+    tradeJumpPage.value = page
+  },
+  { immediate: true }
+)
+
+watch(
+  () => props.ledgerEntries.page,
+  (page) => {
+    ledgerJumpPage.value = page
+  },
+  { immediate: true }
 )
 
 function applyTradeFilters() {
   emit('change-trade-filters', {
     source: tradeDraft.source,
     status: tradeDraft.status,
+    reason: tradeDraft.reason,
     pageSize: tradeDraft.pageSize,
     page: 1
   })
@@ -233,6 +287,7 @@ function applyLedgerFilters() {
   emit('change-ledger-filters', {
     assetType: ledgerDraft.assetType,
     direction: ledgerDraft.direction,
+    reason: ledgerDraft.reason,
     pageSize: ledgerDraft.pageSize,
     page: 1
   })
@@ -243,6 +298,16 @@ function changeTradePage(page) {
 }
 
 function changeLedgerPage(page) {
+  emit('change-ledger-filters', { page })
+}
+
+function goTradePage() {
+  const page = Math.min(Math.max(Number(tradeJumpPage.value || 1), 1), tradeTotalPages.value)
+  emit('change-trade-filters', { page })
+}
+
+function goLedgerPage() {
+  const page = Math.min(Math.max(Number(ledgerJumpPage.value || 1), 1), ledgerTotalPages.value)
   emit('change-ledger-filters', { page })
 }
 </script>

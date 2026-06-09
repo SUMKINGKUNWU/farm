@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -1121,6 +1122,7 @@ class FarmExchangeApplicationTests {
                         .header("Authorization", "Bearer " + sellerToken)
                         .param("source", "PRIVATE")
                         .param("status", "CANCELLED")
+                        .param("reason", "PRIVATE_TRADE_CANCEL")
                         .param("page", "1")
                         .param("pageSize", "1"))
                 .andExpect(status().isOk())
@@ -1142,12 +1144,23 @@ class FarmExchangeApplicationTests {
                         .header("Authorization", "Bearer " + sellerToken)
                         .param("assetType", "ITEM")
                         .param("direction", "IN")
+                        .param("reason", "PRIVATE_TRADE_RELEASE")
                         .param("page", "1")
                         .param("pageSize", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.records.length()").value(1))
                 .andExpect(jsonPath("$.records[0].reason").value("PRIVATE_TRADE_RELEASE"));
+
+        mockMvc.perform(get("/api/me/trades/filter-options")
+                        .header("Authorization", "Bearer " + sellerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reasons[0]").value("MARKET_BUY"));
+
+        mockMvc.perform(get("/api/me/ledger/filter-options")
+                        .header("Authorization", "Bearer " + sellerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reasons[0]").isString());
 
         Integer marketSellLedgerCount = jdbcTemplate.queryForObject(
                 "select count(*) from asset_ledger where user_id = ?::uuid and reason = 'MARKET_SELL'",
@@ -1305,6 +1318,8 @@ class FarmExchangeApplicationTests {
 
         mockMvc.perform(get("/api/admin/audit-logs")
                         .header("Authorization", "Bearer " + adminToken)
+                        .param("from", LocalDate.now().toString())
+                        .param("to", LocalDate.now().toString())
                         .param("action", "ISSUE_BULK_TOKEN")
                         .param("targetType", "APP_USER")
                         .param("page", "1")

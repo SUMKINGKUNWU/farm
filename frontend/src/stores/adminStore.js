@@ -36,9 +36,12 @@ function defaultTradeResult() {
 }
 
 function defaultAuditFilters() {
+  const today = new Date().toISOString().slice(0, 10)
   return {
     action: 'ALL',
     targetType: 'ALL',
+    from: today,
+    to: today,
     page: 1,
     pageSize: 10
   }
@@ -293,6 +296,8 @@ export const useAdminStore = defineStore('admin', {
         const params = new URLSearchParams({
           action: this.auditFilters.action,
           targetType: this.auditFilters.targetType,
+          from: this.auditFilters.from || '',
+          to: this.auditFilters.to || '',
           page: String(this.auditFilters.page),
           pageSize: String(this.auditFilters.pageSize)
         })

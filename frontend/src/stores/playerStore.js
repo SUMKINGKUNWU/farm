@@ -20,6 +20,7 @@ function defaultTradeActivityFilters() {
   return {
     source: 'ALL',
     status: 'ALL',
+    reason: 'ALL',
     page: 1,
     pageSize: 10
   }
@@ -29,6 +30,7 @@ function defaultLedgerActivityFilters() {
   return {
     assetType: 'ALL',
     direction: 'ALL',
+    reason: 'ALL',
     page: 1,
     pageSize: 10
   }
@@ -64,6 +66,8 @@ export const usePlayerStore = defineStore('player', {
     ledgerEntries: defaultPagedResult(),
     tradeActivityFilters: defaultTradeActivityFilters(),
     ledgerActivityFilters: defaultLedgerActivityFilters(),
+    tradeReasonOptions: [],
+    ledgerReasonOptions: [],
     lastProduction: null,
     lastTrade: null,
     loading: false,
@@ -185,6 +189,8 @@ export const usePlayerStore = defineStore('player', {
       this.ledgerEntries = defaultPagedResult()
       this.tradeActivityFilters = defaultTradeActivityFilters()
       this.ledgerActivityFilters = defaultLedgerActivityFilters()
+      this.tradeReasonOptions = []
+      this.ledgerReasonOptions = []
       this.lastProduction = null
       this.lastTrade = null
       this.setMessage('已退出玩家账号')
@@ -325,6 +331,16 @@ export const usePlayerStore = defineStore('player', {
         await this.loadDashboard()
       }, '私下交易报价已取消')
     },
+    async loadActivityFilterOptions() {
+      const headers = this.authHeaders()
+      const [tradeOptions, ledgerOptions] = await Promise.all([
+        requestJson('/api/me/trades/filter-options', { headers }),
+        requestJson('/api/me/ledger/filter-options', { headers })
+      ])
+      this.tradeReasonOptions = tradeOptions.reasons || []
+      this.ledgerReasonOptions = ledgerOptions.reasons || []
+      return { tradeOptions, ledgerOptions }
+    },
     async loadActivity(overrides = {}) {
       return this.run(async () => {
         const headers = this.authHeaders()
@@ -340,12 +356,14 @@ export const usePlayerStore = defineStore('player', {
         const tradeParams = new URLSearchParams({
           source: this.tradeActivityFilters.source,
           status: this.tradeActivityFilters.status,
+          reason: this.tradeActivityFilters.reason,
           page: String(this.tradeActivityFilters.page),
           pageSize: String(this.tradeActivityFilters.pageSize)
         })
         const ledgerParams = new URLSearchParams({
           assetType: this.ledgerActivityFilters.assetType,
           direction: this.ledgerActivityFilters.direction,
+          reason: this.ledgerActivityFilters.reason,
           page: String(this.ledgerActivityFilters.page),
           pageSize: String(this.ledgerActivityFilters.pageSize)
         })
@@ -356,6 +374,11 @@ export const usePlayerStore = defineStore('player', {
         ])
         this.tradeHistory = tradeHistory
         this.ledgerEntries = ledgerEntries
+
+        if (!this.tradeReasonOptions.length || !this.ledgerReasonOptions.length) {
+          await this.loadActivityFilterOptions()
+        }
+
         return { tradeHistory, ledgerEntries }
       }, '活动记录已刷新')
     }

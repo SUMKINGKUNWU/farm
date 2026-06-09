@@ -2,8 +2,10 @@ package com.farm.exchange.me;
 
 import com.farm.exchange.activity.PlayerActivityService;
 import com.farm.exchange.activity.PlayerLedgerEntryResponse;
+import com.farm.exchange.activity.PlayerLedgerFilterOptionResponse;
 import com.farm.exchange.activity.PlayerLedgerQueryResponse;
 import com.farm.exchange.activity.PlayerTradeRecordResponse;
+import com.farm.exchange.activity.PlayerTradeFilterOptionResponse;
 import com.farm.exchange.activity.PlayerTradeQueryResponse;
 import com.farm.exchange.auth.AuthPrincipal;
 import com.farm.exchange.auth.AuthTokenService;
@@ -189,9 +191,10 @@ public class MeController {
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestParam(value = "source", defaultValue = "ALL") String source,
             @RequestParam(value = "status", defaultValue = "ALL") String status,
+            @RequestParam(value = "reason", defaultValue = "ALL") String reason,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
-        return playerActivityService.trades(currentUserId(authorization), source, status, page, pageSize);
+        return playerActivityService.trades(currentUserId(authorization), source, status, reason, page, pageSize);
     }
 
     @GetMapping("/ledger")
@@ -199,9 +202,20 @@ public class MeController {
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestParam(value = "assetType", defaultValue = "ALL") String assetType,
             @RequestParam(value = "direction", defaultValue = "ALL") String direction,
+            @RequestParam(value = "reason", defaultValue = "ALL") String reason,
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize) {
-        return playerActivityService.ledger(currentUserId(authorization), assetType, direction, page, pageSize);
+        return playerActivityService.ledger(currentUserId(authorization), assetType, direction, reason, page, pageSize);
+    }
+
+    @GetMapping("/trades/filter-options")
+    public PlayerTradeFilterOptionResponse tradeFilterOptions(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return playerActivityService.tradeFilterOptions(currentUserId(authorization));
+    }
+
+    @GetMapping("/ledger/filter-options")
+    public PlayerLedgerFilterOptionResponse ledgerFilterOptions(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return playerActivityService.ledgerFilterOptions(currentUserId(authorization));
     }
 
     private UUID currentUserId(String authorization) {

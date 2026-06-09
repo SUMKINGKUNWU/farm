@@ -28,6 +28,14 @@
         </select>
       </label>
       <label>
+        开始日期
+        <input v-model="draftFilters.from" type="date" />
+      </label>
+      <label>
+        结束日期
+        <input v-model="draftFilters.to" type="date" />
+      </label>
+      <label>
         每页
         <select v-model.number="draftFilters.pageSize">
           <option :value="10">10</option>
@@ -67,6 +75,13 @@
       <button class="button ghost" type="button" :disabled="loading || auditResult.page <= 1" @click="goPrev">
         上一页
       </button>
+      <label class="page-jump">
+        页码
+        <input v-model.number="jumpPage" type="number" min="1" :max="totalPages" />
+      </label>
+      <button class="button subtle" type="button" :disabled="loading" @click="goToPage">
+        跳转
+      </button>
       <button class="button ghost" type="button" :disabled="loading || !auditResult.hasNext" @click="goNext">
         下一页
       </button>
@@ -75,7 +90,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 
 const props = defineProps({
   auditResult: { type: Object, required: true },
@@ -85,9 +100,12 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['load-audit-logs'])
+const jumpPage = ref(1)
 const draftFilters = reactive({
   action: 'ALL',
   targetType: 'ALL',
+  from: '',
+  to: '',
   pageSize: 10
 })
 
@@ -101,15 +119,27 @@ watch(
   (filters) => {
     draftFilters.action = filters.action
     draftFilters.targetType = filters.targetType
+    draftFilters.from = filters.from
+    draftFilters.to = filters.to
     draftFilters.pageSize = filters.pageSize
   },
   { deep: true, immediate: true }
+)
+
+watch(
+  () => props.auditResult.page,
+  (page) => {
+    jumpPage.value = page
+  },
+  { immediate: true }
 )
 
 function applyFilters() {
   emit('load-audit-logs', {
     action: draftFilters.action,
     targetType: draftFilters.targetType,
+    from: draftFilters.from,
+    to: draftFilters.to,
     pageSize: draftFilters.pageSize,
     page: 1
   })
@@ -125,5 +155,10 @@ function goPrev() {
 
 function goNext() {
   emit('load-audit-logs', { page: props.auditResult.page + 1 })
+}
+
+function goToPage() {
+  const page = Math.min(Math.max(Number(jumpPage.value || 1), 1), totalPages.value)
+  emit('load-audit-logs', { page })
 }
 </script>

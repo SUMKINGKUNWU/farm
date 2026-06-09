@@ -4,7 +4,9 @@ import com.farm.exchange.bulk.BulkTokenResponse;
 import com.farm.exchange.bulk.BulkTokenService;
 import com.farm.exchange.common.ApiException;
 import com.farm.exchange.common.ErrorCode;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -163,10 +165,12 @@ public class AdminService {
         return new AdminTradeQueryResponse(records, totalCount, safePage, safePageSize, offset + records.size() < totalCount);
     }
 
-    public AdminAuditLogQueryResponse auditLogs(UUID adminUserId, String action, String targetType, int page, int pageSize) {
+    public AdminAuditLogQueryResponse auditLogs(UUID adminUserId, String action, String targetType, String from, String to, int page, int pageSize) {
         ensureAdmin(adminUserId);
         String normalizedAction = normalizeAuditAction(action);
         String normalizedTargetType = normalizeAuditTargetType(targetType);
+        OffsetDateTime fromTime = normalizeFromDate(from);
+        OffsetDateTime toTime = normalizeToDate(to);
         int safePage = Math.max(page, 1);
         int safePageSize = Math.min(Math.max(pageSize, 1), 50);
         int offset = (safePage - 1) * safePageSize;
@@ -181,6 +185,14 @@ public class AdminService {
         if (!"ALL".equals(normalizedTargetType)) {
             filteredSql += " and l.target_type = ?";
             filters.add(normalizedTargetType);
+        }
+        if (fromTime != null) {
+            filteredSql += " and l.created_at >= ?";
+            filters.add(fromTime);
+        }
+        if (toTime != null) {
+            filteredSql += " and l.created_at < ?";
+            filters.add(toTime);
         }
 
         Long total = jdbcTemplate.queryForObject("select count(*) " + filteredSql, Long.class, filters.toArray());
@@ -336,6 +348,28 @@ public class AdminService {
             return normalized;
         }
         throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的审计目标类型");
+    }
+
+    private OffsetDateTime normalizeFromDate(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim()).atStartOfDay().atOffset(ZoneOffset.ofHours(8));
+        } catch (Exception error) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的开始日期");
+        }
+    }
+
+    private OffsetDateTime normalizeToDate(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim()).plusDays(1).atStartOfDay().atOffset(ZoneOffset.ofHours(8));
+        } catch (Exception error) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的结束日期");
+        }
     }
 
     private void writeAuditLog(UUID adminUserId, String action, String targetType, UUID targetId, String reason) {

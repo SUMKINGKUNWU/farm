@@ -92,6 +92,8 @@
           :ledger-entries="player.ledgerEntries"
           :trade-filters="player.tradeActivityFilters"
           :ledger-filters="player.ledgerActivityFilters"
+          :trade-reason-options="player.tradeReasonOptions"
+          :ledger-reason-options="player.ledgerReasonOptions"
           :loading="player.loading"
           :format-money="formatMoney"
           :format-date="formatDate"

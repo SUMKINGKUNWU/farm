@@ -20,10 +20,11 @@ public class PlayerActivityService {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public PlayerTradeQueryResponse trades(UUID userId, String source, String status, int page, int pageSize) {
+    public PlayerTradeQueryResponse trades(UUID userId, String source, String status, String reason, int page, int pageSize) {
         ensureActiveUser(userId);
         String tradeSource = normalizeTradeSource(source);
         String tradeStatus = normalizeTradeStatus(status);
+        String tradeReason = normalizeReason(reason);
         int safePage = Math.max(page, 1);
         int safePageSize = Math.min(Math.max(pageSize, 1), 50);
         int offset = (safePage - 1) * safePageSize;
@@ -31,11 +32,17 @@ public class PlayerActivityService {
         String filteredSql =
                 "from (" +
                         "select 'MARKET' as trade_source, mt.id as trade_id, mt.item_id, i.code as item_code, mt.side, mt.quantity, mt.gross_amount as trade_amount, mt.tax_amount, mt.status, " +
+                        "case when mt.side = 'BUY' then 'MARKET_BUY' else 'MARKET_SELL' end as trade_reason, " +
                         "null::uuid as counterparty_user_id, null::varchar as counterparty_username, mt.created_at " +
                         "from market_trades mt join items i on i.id = mt.item_id where mt.user_id = ? " +
                         "union all " +
                         "select 'PRIVATE' as trade_source, p.id as trade_id, p.item_id, i.code as item_code, " +
                         "case when p.seller_user_id = ? then 'SELL' else 'BUY' end as side, p.quantity, p.price_amount as trade_amount, p.tax_amount, p.status, " +
+                        "case when p.status = 'WAIT_ACCEPT' then 'PRIVATE_TRADE_CREATE' " +
+                        "when p.status = 'CANCELLED' then 'PRIVATE_TRADE_CANCEL' " +
+                        "when p.status = 'COMPLETED' then 'PRIVATE_TRADE_ACCEPT' " +
+                        "when p.status = 'EXPIRED' then 'PRIVATE_TRADE_EXPIRE' " +
+                        "else 'PRIVATE_TRADE_UPDATE' end as trade_reason, " +
                         "case when p.seller_user_id = ? then p.buyer_user_id else p.seller_user_id end as counterparty_user_id, " +
                         "case when p.seller_user_id = ? then buyer.username else seller.username end as counterparty_username, p.created_at " +
                         "from private_trade_offers p " +
@@ -54,6 +61,10 @@ public class PlayerActivityService {
         if (!"ALL".equals(tradeStatus)) {
             filteredSql += " and status = ?";
             filters.add(tradeStatus);
+        }
+        if (!"ALL".equals(tradeReason)) {
+            filteredSql += " and trade_reason = ?";
+            filters.add(tradeReason);
         }
 
         List<Object> countParams = new ArrayList<>(baseParams);
@@ -88,10 +99,11 @@ public class PlayerActivityService {
         return new PlayerTradeQueryResponse(records, totalCount, safePage, safePageSize, offset + records.size() < totalCount);
     }
 
-    public PlayerLedgerQueryResponse ledger(UUID userId, String assetType, String direction, int page, int pageSize) {
+    public PlayerLedgerQueryResponse ledger(UUID userId, String assetType, String direction, String reason, int page, int pageSize) {
         ensureActiveUser(userId);
         String normalizedAssetType = normalizeAssetType(assetType);
         String normalizedDirection = normalizeLedgerDirection(direction);
+        String normalizedReason = normalizeReason(reason);
         int safePage = Math.max(page, 1);
         int safePageSize = Math.min(Math.max(pageSize, 1), 50);
         int offset = (safePage - 1) * safePageSize;
@@ -108,6 +120,10 @@ public class PlayerActivityService {
             filteredSql += " and l.change_amount >= 0";
         } else if ("OUT".equals(normalizedDirection)) {
             filteredSql += " and l.change_amount < 0";
+        }
+        if (!"ALL".equals(normalizedReason)) {
+            filteredSql += " and l.reason = ?";
+            params.add(normalizedReason);
         }
 
         Long total = jdbcTemplate.queryForObject("select count(*) " + filteredSql, Long.class, params.toArray());
@@ -136,6 +152,29 @@ public class PlayerActivityService {
 
         long totalCount = total == null ? 0L : total;
         return new PlayerLedgerQueryResponse(records, totalCount, safePage, safePageSize, offset + records.size() < totalCount);
+    }
+
+    public PlayerTradeFilterOptionResponse tradeFilterOptions(UUID userId) {
+        ensureActiveUser(userId);
+        return new PlayerTradeFilterOptionResponse(List.of(
+                "MARKET_BUY",
+                "MARKET_SELL",
+                "PRIVATE_TRADE_CREATE",
+                "PRIVATE_TRADE_ACCEPT",
+                "PRIVATE_TRADE_CANCEL",
+                "PRIVATE_TRADE_EXPIRE",
+                "PRIVATE_TRADE_UPDATE"
+        ));
+    }
+
+    public PlayerLedgerFilterOptionResponse ledgerFilterOptions(UUID userId) {
+        ensureActiveUser(userId);
+        List<String> reasons = jdbcTemplate.query(
+                "select distinct reason from asset_ledger where user_id = ? order by reason",
+                (rs, rowNum) -> rs.getString("reason"),
+                userId
+        );
+        return new PlayerLedgerFilterOptionResponse(reasons);
     }
 
     private void ensureActiveUser(UUID userId) {
@@ -185,6 +224,10 @@ public class PlayerActivityService {
             return normalized;
         }
         throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.INVALID_OPERATION, "不支持的流水方向");
+    }
+
+    private String normalizeReason(String reason) {
+        return reason == null || reason.trim().isEmpty() ? "ALL" : reason.trim().toUpperCase(Locale.ROOT);
     }
 
     private UUID nullableUuid(String value) {
