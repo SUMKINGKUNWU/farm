@@ -47,7 +47,7 @@ export const errorCodeActions = {
   INSUFFICIENT_INVENTORY: '确认玩家库存、锁定库存和交易数量。',
   BULK_TOKEN_REQUIRED: '先由管理员发放符合条件的大宗交易令牌。',
   BULK_TOKEN_INVALID: '检查令牌归属、商品类型和状态。',
-  BULK_TOKEN_EXPIRED: '重新发放有效期内的大宗令牌。',
+  BULK_TOKEN_EXPIRED: '重新发放有效期内的大宗交易令牌。',
   BULK_TOKEN_LIMIT_EXCEEDED: '提高令牌限额或降低单笔交易金额。',
   ITEM_NOT_TRADABLE: '检查商品类型、状态和 trade_enabled 配置。',
   STATE_CONFLICT: '刷新当前数据后重新提交。',

@@ -195,7 +195,11 @@ export const useAdminStore = defineStore('admin', {
     selectTargetUser(user) {
       this.targetUserId = user?.userId || ''
       this.userSearchQuery = user?.username || ''
-      this.tradeFilters.page = 1
+      this.assetFilters = defaultAssetFilters()
+      this.tradeFilters = defaultTradeFilters()
+      this.tradeFilterOptions = defaultTradeFilterOptions()
+      this.assets = null
+      this.tradeResult = defaultTradeResult()
       this.auditFilters.page = 1
     },
     async login() {
