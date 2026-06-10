@@ -10,8 +10,12 @@
       </div>
 
       <div class="mode-switch">
-        <button :class="{ active: activeMode === 'player' }" type="button" @click="activeMode = 'player'">玩家端</button>
-        <button :class="{ active: activeMode === 'admin' }" type="button" @click="activeMode = 'admin'">管理台</button>
+        <button :class="{ active: activeMode === 'player' }" type="button" @click="activeMode = 'player'">
+          玩家端
+        </button>
+        <button :class="{ active: activeMode === 'admin' }" type="button" @click="activeMode = 'admin'">
+          管理台
+        </button>
       </div>
 
       <PlayerIdentity
@@ -38,14 +42,14 @@
         @logout="admin.logout"
       />
 
-      <nav class="nav" v-if="activeMode === 'player'">
+      <nav v-if="activeMode === 'player'" class="nav">
         <a href="#player-overview">概览</a>
         <a href="#player-shop">商店</a>
         <a href="#player-fields">田地牧场</a>
         <a href="#player-market">交易站</a>
         <a href="#player-private">私下交易</a>
       </nav>
-      <nav class="nav" v-else>
+      <nav v-else class="nav">
         <a href="#tax">税率</a>
         <a href="#token">令牌</a>
         <a href="#assets">资产</a>
